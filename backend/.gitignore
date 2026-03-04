@@ -1,0 +1,11 @@
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+
+# Environment variables
+.env
+target/
+.idea/
+*.log
