@@ -4,28 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1d84857a-8cea-48df-8e22-1aefa72cdf9a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/eslint.config.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/package-lock.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/package.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/public/vite.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/src/App.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/src/App.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/src/assets/react.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/src/index.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/src/main.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/finylicts-frontend/vite.config.js" beforeDir="false" />
-    </list>
+    <list default="true" id="1d84857a-8cea-48df-8e22-1aefa72cdf9a" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/backend" />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="MavenImportPreferences">
     <option name="generalSettings">
@@ -52,7 +38,8 @@
     "git-widget-placeholder": "Bivon",
     "ignore.virus.scanning.warn.message": "true",
     "kotlin-language-version-configured": "true",
-    "settings.editor.selected.configurable": "project.propVCSSupport.Mappings"
+    "last_opened_file_path": "C:/Users/orecy/Desktop/Finylitics",
+    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings"
   }
 }]]></component>
   <component name="SharedIndexes">
