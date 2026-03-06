@@ -1,7 +1,7 @@
-package com.Group2.Finylitics.Controller;
+package com.Group2.Finlytic.Controller;
 
-import com.Group2.Finylitics.Model.Transactions;
-import com.Group2.Finylitics.Service.TransactionsService;
+import com.Group2.Finlytic.Model.Transactions;
+import com.Group2.Finlytic.Service.TransactionsService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
