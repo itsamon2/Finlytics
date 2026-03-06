@@ -1,7 +1,7 @@
-package com.Group2.Finylitics.Service;
+package com.Group2.Finlytic.Service;
 
-import com.Group2.Finylitics.Model.Transactions;
-import com.Group2.Finylitics.repo.Transactionsrepo;
+import com.Group2.Finlytic.Model.Transactions;
+import com.Group2.Finlytic.repo.Transactionsrepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
