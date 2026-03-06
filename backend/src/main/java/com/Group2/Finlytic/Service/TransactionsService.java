@@ -1,5 +1,6 @@
 package com.Group2.Finlytic.Service;
 
+import com.Group2.Finlytic.Model.TransactionAnalysis;
 import com.Group2.Finlytic.Model.Transactions;
 import com.Group2.Finlytic.repo.Transactionsrepo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,12 +13,25 @@ import java.util.Optional;
 public class TransactionsService {
 
     @Autowired
-    private  Transactionsrepo transactionsrepo;
+    private Transactionsrepo transactionsrepo;
 
+    @Autowired
+    private CategorizationService categorizationService;
 
-    // Save transaction
+    @Autowired
+    private BudgetManagerService budgetManagerService; // ← ADD THIS
+
+    // Save transaction + auto-categorize
     public Transactions saveTransaction(Transactions transaction) {
-        return transactionsrepo.save(transaction);
+        if (transaction.getRawMessage() != null && !transaction.getRawMessage().isEmpty()) {
+            TransactionAnalysis analysis = categorizationService.analyze(transaction.getRawMessage());
+            transaction.setCategory(analysis.category());
+            transaction.setType(Transactions.TransactionType.valueOf(analysis.transactionType()));
+            transaction.setAmount(analysis.amount());
+        }
+        Transactions saved = transactionsrepo.save(transaction);
+        budgetManagerService.updateBudgetFromTransaction(saved); // ← lowercase b
+        return saved;
     }
 
     // Get all transactions

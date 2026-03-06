@@ -12,10 +12,20 @@
         </processorPath>
         <module name="Finylitics" />
       </profile>
+      <profile name="Annotation profile for Finlytics" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.32/lombok-1.18.32.jar" />
+        </processorPath>
+        <module name="Finlytics" />
+      </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="Finlytics" options="-parameters -parameters" />
       <module name="Finylitics" options="-parameters" />
     </option>
   </component>
