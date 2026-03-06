@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+
 @Entity
 @Data
 @Table(name = "transactions")
@@ -24,6 +25,9 @@ public class Transactions {
 
     @Column(name = "raw_message")
     private String rawMessage;
+
+    @Column(name = "category")
+    private String category;  // AI will populate this
 
     @CreationTimestamp
     @Column(name = "creation_date", updatable = false)
