@@ -30,7 +30,7 @@ const Sidebar = () => {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <h2>FinFlow</h2>
+        <h2>Finlytics</h2>
         <span>Personal Finance</span>
       </div>
       
