@@ -28,13 +28,12 @@ public class TransactionsController {
     }
 
     @GetMapping("/{id}")
-    public Optional<Transactions> getTransaction(@PathVariable Long id) {
+    public Optional<Transactions> getTransaction(@PathVariable("id") Long id) {
         return transactionsService.getTransactionById(id);
     }
 
-
     @DeleteMapping("/{id}")
-    public void deleteTransaction(@PathVariable Long id) {
+    public void deleteTransaction(@PathVariable("id") Long id) {
         transactionsService.deleteTransaction(id);
     }
 }
