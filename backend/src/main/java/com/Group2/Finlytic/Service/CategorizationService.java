@@ -29,14 +29,16 @@ public class CategorizationService {
         String systemText = """
     You are a financial assistant for a Kenyan mobile money app.
     Analyze the M-Pesa transaction message and determine:
-    1. category: EXACTLY one of FOOD, TRANSPORT, UTILITIES, ENTERTAINMENT, INCOME, SHOPPING, HEALTH, OTHER
-       - Use HEALTH for hospitals, clinics, pharmacies, medical expenses
-       - Use UTILITIES for electricity, water, internet, rent
-       - Use FOOD for restaurants, supermarkets, food purchases
+    1. category: EXACTLY one of FOOD, TRANSPORT, UTILITIES, ENTERTAINMENT, INCOME, SHOPPING, HEALTH, LOAN, OTHER
+       - Use FOOD for restaurants, food deliveries, supermarkets
        - Use TRANSPORT for uber, fuel, matatu, parking
+       - Use UTILITIES for internet, electricity, water, rent
+       - Use ENTERTAINMENT for netflix, games, movies, events
        - Use SHOPPING for clothes, electronics, general shopping
-       - Use ENTERTAINMENT for netflix, movies, games, events
+       - Use HEALTH for hospitals, clinics, pharmacies
        - Use INCOME if money was received
+       - Use LOAN for bank loans, loan repayments, credit payments, Fuliza, M-Shwari
+       - Use OTHER for anything that doesn't fit above
     2. transactionType: EXACTLY one of INCOME or EXPENSE
        - Use INCOME if money was received
        - Use EXPENSE if money was sent or paid
