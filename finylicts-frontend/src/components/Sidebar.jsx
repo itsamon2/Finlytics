@@ -80,6 +80,17 @@ const Sidebar = () => {
           </ul>
         </div>
       </nav>
+
+      <div className="sidebar-footer">
+        <ul>
+          <li 
+            className={isActive('/settings') ? 'active' : ''}
+            onClick={() => navigate('/settings')}
+          >
+             Settings
+          </li>
+        </ul>
+      </div>
     </aside>
   );
 };

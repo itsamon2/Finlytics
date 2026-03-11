@@ -1,16 +1,16 @@
-// src/pages/BudgetsPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import './Budgets.styles.css';
 
 const BudgetsPage = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [selectedMonth, setSelectedMonth] = useState('March 2026');
+  const [budgetFilter, setBudgetFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('category');
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState(null);
-  const [modalMode, setModalMode] = useState('create'); // 'create', 'edit', 'view'
+  const [modalMode, setModalMode] = useState('create');
   
-  // Form state for creating/editing budgets
   const [budgetForm, setBudgetForm] = useState({
     category: '',
     budget: '',
@@ -18,81 +18,74 @@ const BudgetsPage = () => {
     transactions: 0
   });
 
-  // Static budget data
   const [budgets, setBudgets] = useState([
-    { 
-      id: 1,
-      category: 'Housing', 
-      budget: 1500, 
-      spent: 1200,
-      remaining: 300,
-      color: '#2DD4BF',
-      transactions: 8
-    },
-    { 
-      id: 2,
-      category: 'Food', 
-      budget: 800, 
-      spent: 650,
-      remaining: 150,
-      color: '#F59E0B',
-      transactions: 23
-    },
-    { 
-      id: 3,
-      category: 'Transport', 
-      budget: 500, 
-      spent: 420,
-      remaining: 80,
-      color: '#3B82F6',
-      transactions: 12
-    },
-    { 
-      id: 4,
-      category: 'Entertainment', 
-      budget: 400, 
-      spent: 310,
-      remaining: 90,
-      color: '#8B5CF6',
-      transactions: 6
-    },
-    { 
-      id: 5,
-      category: 'Utilities', 
-      budget: 300, 
-      spent: 280,
-      remaining: 20,
-      color: '#EC4899',
-      transactions: 4
-    },
-    { 
-      id: 6,
-      category: 'Shopping', 
-      budget: 350, 
-      spent: 180,
-      remaining: 170,
-      color: '#EF4444',
-      transactions: 5
-    }
+    { id: 1, category: 'Housing', budget: 1500, spent: 1200, remaining: 300, color: '#2DD4BF', transactions: 8 },
+    { id: 2, category: 'Food', budget: 800, spent: 650, remaining: 150, color: '#F59E0B', transactions: 23 },
+    { id: 3, category: 'Transport', budget: 500, spent: 420, remaining: 80, color: '#3B82F6', transactions: 12 },
+    { id: 4, category: 'Entertainment', budget: 400, spent: 310, remaining: 90, color: '#8B5CF6', transactions: 6 },
+    { id: 5, category: 'Utilities', budget: 300, spent: 280, remaining: 20, color: '#EC4899', transactions: 4 },
+    { id: 6, category: 'Shopping', budget: 350, spent: 180, remaining: 170, color: '#EF4444', transactions: 5 }
   ]);
 
-  // Available colors for budgets
   const colorOptions = [
-    '#2DD4BF', // Teal
-    '#F59E0B', // Amber
-    '#3B82F6', // Blue
-    '#8B5CF6', // Purple
-    '#EC4899', // Pink
-    '#EF4444', // Red
-    '#10B981', // Green
-    '#F97316', // Orange
+    '#2DD4BF', '#F59E0B', '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444', '#10B981', '#F97316'
   ];
+
+  const filteredBudgets = useMemo(() => {
+    return budgets.filter(budget => {
+      const percentage = (budget.spent / budget.budget) * 100;
+      
+      switch(budgetFilter) {
+        case 'on-track':
+          return percentage < 75;
+        case 'warning':
+          return percentage >= 75 && percentage < 90;
+        case 'over':
+          return percentage >= 90 || budget.spent > budget.budget;
+        default:
+          return true;
+      }
+    }).sort((a, b) => {
+      switch(sortBy) {
+        case 'category':
+          return a.category.localeCompare(b.category);
+        case 'budget':
+          return b.budget - a.budget;
+        case 'spent':
+          return b.spent - a.spent;
+        case 'progress':
+          return (b.spent / b.budget) - (a.spent / a.budget);
+        default:
+          return 0;
+      }
+    });
+  }, [budgets, budgetFilter, sortBy]);
+
+  const insights = useMemo(() => {
+    const total = budgets.length;
+    const onTrack = budgets.filter(b => (b.spent / b.budget) * 100 < 75).length;
+    const warning = budgets.filter(b => {
+      const p = (b.spent / b.budget) * 100;
+      return p >= 75 && p < 90;
+    }).length;
+    const over = budgets.filter(b => (b.spent / b.budget) * 100 >= 90 || b.spent > b.budget).length;
+    
+    return {
+      total,
+      onTrack,
+      warning,
+      over,
+      healthScore: Math.round((onTrack / total) * 100),
+      needsAdjustment: budgets
+        .filter(b => (b.spent / b.budget) * 100 > 80)
+        .map(b => b.category)
+    };
+  }, [budgets]);
 
   const totalBudget = budgets.reduce((sum, b) => sum + b.budget, 0);
   const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
   const totalRemaining = totalBudget - totalSpent;
 
-  // Handle month navigation
   const changeMonth = (direction) => {
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 
                     'July', 'August', 'September', 'October', 'November', 'December'];
@@ -113,19 +106,12 @@ const BudgetsPage = () => {
     setSelectedMonth(`${months[monthIndex]} ${currentYear}`);
   };
 
-  // Open create budget modal
   const handleCreateBudget = () => {
     setModalMode('create');
-    setBudgetForm({
-      category: '',
-      budget: '',
-      color: '#2DD4BF',
-      transactions: 0
-    });
+    setBudgetForm({ category: '', budget: '', color: '#2DD4BF', transactions: 0 });
     setShowBudgetModal(true);
   };
 
-  // Open edit budget modal
   const handleEditBudget = (budget) => {
     setModalMode('edit');
     setSelectedBudget(budget);
@@ -138,30 +124,20 @@ const BudgetsPage = () => {
     setShowBudgetModal(true);
   };
 
-  // Open view details modal
   const handleViewDetails = (budget) => {
     setSelectedBudget(budget);
     setShowDetailsModal(true);
   };
 
-  // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setBudgetForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setBudgetForm(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle color selection
   const handleColorSelect = (color) => {
-    setBudgetForm(prev => ({
-      ...prev,
-      color
-    }));
+    setBudgetForm(prev => ({ ...prev, color }));
   };
 
-  // Save budget (create or update)
   const handleSaveBudget = () => {
     if (!budgetForm.category || !budgetForm.budget) {
       alert('Please fill in all fields');
@@ -171,7 +147,6 @@ const BudgetsPage = () => {
     const budgetAmount = parseFloat(budgetForm.budget);
     
     if (modalMode === 'create') {
-      // Create new budget
       const newBudget = {
         id: budgets.length + 1,
         category: budgetForm.category,
@@ -183,25 +158,16 @@ const BudgetsPage = () => {
       };
       setBudgets([...budgets, newBudget]);
     } else {
-      // Update existing budget
       const updatedBudgets = budgets.map(b => 
         b.id === selectedBudget.id 
-          ? {
-              ...b,
-              category: budgetForm.category,
-              budget: budgetAmount,
-              remaining: budgetAmount - b.spent,
-              color: budgetForm.color
-            }
+          ? { ...b, category: budgetForm.category, budget: budgetAmount, remaining: budgetAmount - b.spent, color: budgetForm.color }
           : b
       );
       setBudgets(updatedBudgets);
     }
-    
     setShowBudgetModal(false);
   };
 
-  // Handle delete budget
   const handleDeleteBudget = (id) => {
     if (window.confirm('Are you sure you want to delete this budget?')) {
       setBudgets(budgets.filter(b => b.id !== id));
@@ -209,11 +175,10 @@ const BudgetsPage = () => {
     }
   };
 
-  // Handle export
   const handleExport = () => {
     const csvContent = [
       ['Category', 'Budget', 'Spent', 'Remaining', 'Utilization %', 'Transactions'],
-      ...budgets.map(b => [
+      ...filteredBudgets.map(b => [
         b.category,
         b.budget,
         b.spent,
@@ -229,7 +194,6 @@ const BudgetsPage = () => {
     a.href = url;
     a.download = `budgets-${selectedMonth.replace(' ', '-')}.csv`;
     a.click();
-    
     window.URL.revokeObjectURL(url);
   };
 
@@ -252,7 +216,6 @@ const BudgetsPage = () => {
         </div>
       </div>
 
-      {/* Overview Cards */}
       <div className="budget-overview">
         <div className="overview-card total">
           <span className="overview-label">Total Budget</span>
@@ -273,34 +236,152 @@ const BudgetsPage = () => {
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="budget-controls">
-        <div className="month-selector">
-          <button className="month-nav" onClick={() => changeMonth(-1)}>←</button>
-          <span className="current-month">{selectedMonth}</span>
-          <button className="month-nav" onClick={() => changeMonth(1)}>→</button>
+      {/* Insights Dashboard */}
+      <div className="insights-dashboard">
+        <div className="insights-header">
+          <h3>Budget Health Dashboard</h3>
+          <div className="health-score-badge">
+            <span className="score-label">Health Score</span>
+            <span className="score-value">{insights.healthScore}%</span>
+          </div>
         </div>
 
-        <div className="view-toggles">
-          <button 
-            className={`view-toggle ${viewMode === 'grid' ? 'active' : ''}`}
-            onClick={() => setViewMode('grid')}
-          >
-            Grid View
-          </button>
-          <button 
-            className={`view-toggle ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => setViewMode('list')}
-          >
-            List View
-          </button>
+        <div className="health-meter">
+          <div className="meter-bar">
+            <div className="meter-segment healthy" style={{ width: `${(insights.onTrack / insights.total) * 100}%` }}>
+              <span className="meter-tooltip">On Track: {insights.onTrack}</span>
+            </div>
+            <div className="meter-segment warning" style={{ width: `${(insights.warning / insights.total) * 100}%` }}>
+              <span className="meter-tooltip">Warning: {insights.warning}</span>
+            </div>
+            <div className="meter-segment over" style={{ width: `${(insights.over / insights.total) * 100}%` }}>
+              <span className="meter-tooltip">Over: {insights.over}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="insights-grid-enhanced">
+          <div className="insight-card healthy">
+            <div className="insight-icon">✅</div>
+            <div className="insight-content">
+              <span className="insight-card-label">On Track</span>
+              <span className="insight-card-value">{insights.onTrack}</span>
+              <span className="insight-card-sub">categories</span>
+            </div>
+          </div>
+
+          <div className="insight-card warning">
+            <div className="insight-icon">⚠️</div>
+            <div className="insight-content">
+              <span className="insight-card-label">Warning</span>
+              <span className="insight-card-value">{insights.warning}</span>
+              <span className="insight-card-sub">need attention</span>
+            </div>
+          </div>
+
+          <div className="insight-card over">
+            <div className="insight-icon">🔴</div>
+            <div className="insight-content">
+              <span className="insight-card-label">Over Budget</span>
+              <span className="insight-card-value">{insights.over}</span>
+              <span className="insight-card-sub">exceeded</span>
+            </div>
+          </div>
+
+          <div className="insight-card total">
+            <div className="insight-icon">📊</div>
+            <div className="insight-content">
+              <span className="insight-card-label">Total Categories</span>
+              <span className="insight-card-value">{insights.total}</span>
+              <span className="insight-card-sub">active</span>
+            </div>
+          </div>
+        </div>
+
+        {insights.needsAdjustment.length > 0 && (
+          <div className="insight-alert-banner">
+            <div className="alert-icon">💡</div>
+            <div className="alert-message">
+              <strong>Consider reviewing:</strong> {insights.needsAdjustment.join(' • ')}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* CONTROLS SECTION */}
+      <div className="controls-wrapper">
+        {/* Top Row - Month & View Toggle */}
+        <div className="controls-top">
+          <div className="month-indicator">
+            <button className="month-btn" onClick={() => changeMonth(-1)}>←</button>
+            <span className="current-month">{selectedMonth}</span>
+            <button className="month-btn" onClick={() => changeMonth(1)}>→</button>
+          </div>
+
+          <div className="display-options">
+            <button 
+              className={`display-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+            >
+              Grid
+            </button>
+            <button 
+              className={`display-btn ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+            >
+              List
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Bar - */}
+        <div className="filter-bar">
+          <div className="filter-group">
+            <button 
+              className={`filter-item ${budgetFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setBudgetFilter('all')}
+            >
+              All <span className="filter-count">{insights.total}</span>
+            </button>
+            <button 
+              className={`filter-item ${budgetFilter === 'on-track' ? 'active' : ''}`}
+              onClick={() => setBudgetFilter('on-track')}
+            >
+              On Track <span className="filter-count">{insights.onTrack}</span>
+            </button>
+            <button 
+              className={`filter-item ${budgetFilter === 'warning' ? 'active' : ''}`}
+              onClick={() => setBudgetFilter('warning')}
+            >
+              Warning <span className="filter-count">{insights.warning}</span>
+            </button>
+            <button 
+              className={`filter-item ${budgetFilter === 'over' ? 'active' : ''}`}
+              onClick={() => setBudgetFilter('over')}
+            >
+              Over <span className="filter-count">{insights.over}</span>
+            </button>
+          </div>
+
+          <div className="sort-wrapper">
+            <select 
+              className="sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="category">Category</option>
+              <option value="budget">Budget</option>
+              <option value="spent">Spent</option>
+              <option value="progress">Progress</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Budget Grid */}
+      {/* Budget Grid/List View */}
       {viewMode === 'grid' ? (
         <div className="budget-grid">
-          {budgets.map((budget) => {
+          {filteredBudgets.map((budget) => {
             const percentage = (budget.spent / budget.budget) * 100;
             const isOverBudget = budget.spent > budget.budget;
             const statusClass = percentage > 90 ? 'danger' : percentage > 75 ? 'warning' : 'good';
@@ -357,7 +438,6 @@ const BudgetsPage = () => {
           })}
         </div>
       ) : (
-        // List View
         <div className="budget-list-container">
           <div className="budget-list-header">
             <span>Category</span>
@@ -367,7 +447,7 @@ const BudgetsPage = () => {
             <span>Progress</span>
             <span>Actions</span>
           </div>
-          {budgets.map((budget) => {
+          {filteredBudgets.map((budget) => {
             const percentage = (budget.spent / budget.budget) * 100;
             const isOverBudget = budget.spent > budget.budget;
             
@@ -412,7 +492,6 @@ const BudgetsPage = () => {
               <h2>{modalMode === 'create' ? 'Create New Budget' : 'Edit Budget'}</h2>
               <button className="close-btn" onClick={() => setShowBudgetModal(false)}>×</button>
             </div>
-
             <div className="modal-body">
               <div className="form-group">
                 <label>Category Name</label>
@@ -425,7 +504,6 @@ const BudgetsPage = () => {
                   className="form-input"
                 />
               </div>
-
               <div className="form-group">
                 <label>Monthly Budget ($)</label>
                 <input
@@ -439,7 +517,6 @@ const BudgetsPage = () => {
                   className="form-input"
                 />
               </div>
-
               <div className="form-group">
                 <label>Budget Color</label>
                 <div className="color-picker">
@@ -455,11 +532,8 @@ const BudgetsPage = () => {
                 </div>
               </div>
             </div>
-
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowBudgetModal(false)}>
-                Cancel
-              </button>
+              <button className="btn btn-secondary" onClick={() => setShowBudgetModal(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSaveBudget}>
                 {modalMode === 'create' ? 'Create Budget' : 'Save Changes'}
               </button>
@@ -476,9 +550,7 @@ const BudgetsPage = () => {
               <h2>{selectedBudget.category} Budget Details</h2>
               <button className="close-btn" onClick={() => setShowDetailsModal(false)}>×</button>
             </div>
-
             <div className="modal-body">
-              {/* Summary Card */}
               <div className="details-summary" style={{ borderTopColor: selectedBudget.color }}>
                 <div className="summary-item">
                   <span className="summary-item-label">Monthly Budget</span>
@@ -495,8 +567,6 @@ const BudgetsPage = () => {
                   </span>
                 </div>
               </div>
-
-              {/* Progress Bar */}
               <div className="details-progress">
                 <div className="progress-header">
                   <span>Progress</span>
@@ -514,8 +584,6 @@ const BudgetsPage = () => {
                   ></div>
                 </div>
               </div>
-
-              {/* Stats Grid */}
               <div className="stats-grid">
                 <div className="stat-card">
                   <span className="stat-card-label">Transactions</span>
@@ -542,8 +610,6 @@ const BudgetsPage = () => {
                   </span>
                 </div>
               </div>
-
-              {/* Recent Transactions Preview */}
               <div className="recent-transactions-preview">
                 <h3>Recent Transactions</h3>
                 <div className="preview-list">
@@ -566,7 +632,6 @@ const BudgetsPage = () => {
                 <button className="view-all-btn">View All Transactions →</button>
               </div>
             </div>
-
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => handleEditBudget(selectedBudget)}>
                 Edit Budget

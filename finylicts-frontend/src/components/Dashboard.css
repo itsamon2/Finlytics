@@ -585,15 +585,58 @@
   }
 }
 
-/* Ensure fluid images/media */
 img, svg {
   max-width: 100%;
   height: auto;
 }
 
-/* Use relative units for better scaling */
 .card .amount, 
 .section h2,
 .welcome-section h1 {
   word-wrap: break-word;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 24px 0 24px 0;
+  border-top: 1px solid #1E293B;
+}
+
+.sidebar-footer ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-footer li {
+  padding: 10px 24px;
+  color: #CBD5E1;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-footer li:hover {
+  background: #1E293B;
+  color: #FFFFFF;
+}
+
+.sidebar-footer li.active {
+  background: #1E293B;
+  color: #2DD4BF;
+  font-weight: 500;
+}
+
+.sidebar-footer li.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background: #2DD4BF;
 }
