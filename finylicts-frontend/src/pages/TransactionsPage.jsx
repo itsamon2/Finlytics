@@ -1,95 +1,125 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import './Transactions.styles.css';
 
 const TransactionsPage = () => {
   const [filter, setFilter] = useState('all');
   const [dateRange, setDateRange] = useState('this-month');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
 
-  // Static transaction data (matches what backend will return)
+  // Static transaction data
   const transactions = [
-    { id: 1, date: '2026-03-03', description: 'Grocery Store', category: 'Food', amount: -82.50, status: 'completed' },
-    { id: 2, date: '2026-03-01', description: 'Salary Deposit', category: 'Income', amount: 5240.00, status: 'completed' },
-    { id: 3, date: '2026-02-28', description: 'Netflix', category: 'Entertainment', amount: -15.99, status: 'completed' },
-    { id: 4, date: '2026-02-27', description: 'Gas Station', category: 'Transport', amount: -45.20, status: 'completed' },
-    { id: 5, date: '2026-02-26', description: 'Freelance Work', category: 'Income', amount: 850.00, status: 'completed' },
-    { id: 6, date: '2026-02-25', description: 'Restaurant', category: 'Food', amount: -65.30, status: 'completed' },
-    { id: 7, date: '2026-02-24', description: 'Electric Bill', category: 'Utilities', amount: -120.00, status: 'pending' },
-    { id: 8, date: '2026-02-23', description: 'Amazon', category: 'Shopping', amount: -89.99, status: 'completed' },
+    { id: 1, date: '2026-03-03', description: 'Grocery Store', amount: -82.50 },
+    { id: 2, date: '2026-03-01', description: 'Salary Deposit', amount: 5240.00 },
+    { id: 3, date: '2026-02-28', description: 'Netflix', amount: -15.99 },
+    { id: 4, date: '2026-02-27', description: 'Gas Station', amount: -45.20 },
+    { id: 5, date: '2026-02-26', description: 'Freelance Work', amount: 850.00 },
+    { id: 6, date: '2026-02-25', description: 'Restaurant', amount: -65.30 },
+    { id: 7, date: '2026-02-24', description: 'Electric Bill', amount: -120.00 },
+    { id: 8, date: '2026-02-23', description: 'Amazon', amount: -89.99 },
   ];
 
-  // Filter transactions based on selected filter and search
-  const filteredTransactions = transactions.filter(transaction => {
-    // Filter by type
-    if (filter === 'income' && transaction.amount < 0) return false;
-    if (filter === 'expenses' && transaction.amount > 0) return false;
+  // Filter by date range
+  const filterByDateRange = (transaction) => {
+    const today = new Date();
+    const transactionDate = new Date(transaction.date);
     
-    // Search by description
-    if (searchTerm && !transaction.description.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    
-    return true;
-  });
+    switch(dateRange) {
+      case 'this-month':
+        return transactionDate.getMonth() === today.getMonth() && 
+               transactionDate.getFullYear() === today.getFullYear();
+      case 'last-month':
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        return transactionDate.getMonth() === lastMonth.getMonth() &&
+               transactionDate.getFullYear() === lastMonth.getFullYear();
+      case 'last-3-months':
+        const threeMonthsAgo = new Date(today.setMonth(today.getMonth() - 3));
+        return transactionDate >= threeMonthsAgo;
+      case 'this-year':
+        return transactionDate.getFullYear() === today.getFullYear();
+      default:
+        return true;
+    }
+  };
+
+  // Filter and search transactions
+  const filteredTransactions = useMemo(() => {
+    return transactions
+      .filter(transaction => {
+        if (filter === 'income' && transaction.amount < 0) return false;
+        if (filter === 'expenses' && transaction.amount > 0) return false;
+        if (searchTerm && !transaction.description.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+        return filterByDateRange(transaction);
+      })
+      .sort((a, b) => {
+        switch(sortBy) {
+          case 'newest':
+            return new Date(b.date) - new Date(a.date);
+          case 'oldest':
+            return new Date(a.date) - new Date(b.date);
+          case 'highest':
+            return Math.abs(b.amount) - Math.abs(a.amount);
+          case 'lowest':
+            return Math.abs(a.amount) - Math.abs(b.amount);
+          default:
+            return 0;
+        }
+      });
+  }, [filter, searchTerm, dateRange, sortBy]);
 
   // Summary stats
   const summary = {
     totalIncome: transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0),
     totalExpenses: Math.abs(transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0)),
-    pendingCount: transactions.filter(t => t.status === 'pending').length,
     averageDaily: 124.50
+  };
+
+  // Quick stats
+  const quickStats = {
+    largestIncome: Math.max(...transactions.filter(t => t.amount > 0).map(t => t.amount)),
+    largestExpense: Math.min(...transactions.filter(t => t.amount < 0).map(t => t.amount)),
+    totalCount: filteredTransactions.length,
+    averageAmount: (summary.totalIncome + summary.totalExpenses) / transactions.length
   };
 
   // Handle export
   const handleExport = () => {
-    const dataToExport = filteredTransactions.length > 0 ? filteredTransactions : transactions;
-    
-    if (dataToExport.length === 0) {
+    if (filteredTransactions.length === 0) {
       alert('No transactions to export');
       return;
     }
 
-    // Create CSV content
     const csvContent = [
-      ['Date', 'Description', 'Category', 'Amount', 'Status'],
-      ...dataToExport.map(t => [
+      ['Date', 'Description', 'Amount'],
+      ...filteredTransactions.map(t => [
         t.date,
         t.description,
-        t.category,
-        t.amount,
-        t.status
+        t.amount
       ])
     ].map(row => row.join(',')).join('\n');
 
-    // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
-    
-    // Clean up
     window.URL.revokeObjectURL(url);
-    
-    //Show success message
-    alert(`Successfully exported ${dataToExport.length} transactions`);
+    alert(`Exported ${filteredTransactions.length} transactions`);
   };
 
-  // Group transactions by date
+  // Group by date for display
   const groupedTransactions = filteredTransactions.reduce((groups, transaction) => {
     const date = transaction.date;
-    if (!groups[date]) {
-      groups[date] = [];
-    }
+    if (!groups[date]) groups[date] = [];
     groups[date].push(transaction);
     return groups;
   }, {});
 
-  // Sort dates in descending order
   const sortedDates = Object.keys(groupedTransactions).sort((a, b) => new Date(b) - new Date(a));
 
   return (
     <div className="transactions-page">
-      {/* Page Header */}
       <div className="page-header">
         <div>
           <h1>Transactions</h1>
@@ -98,7 +128,7 @@ const TransactionsPage = () => {
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={handleExport}>
             <span className="btn-icon">📊</span>
-            Export {filteredTransactions.length > 0 ? `(${filteredTransactions.length})` : ''}
+            Export ({filteredTransactions.length})
           </button>
         </div>
       </div>
@@ -120,18 +150,34 @@ const TransactionsPage = () => {
           </div>
         </div>
         <div className="summary-card">
-          <div className="summary-icon pending">⏳</div>
-          <div className="summary-details">
-            <span className="summary-label">Pending</span>
-            <span className="summary-value">{summary.pendingCount}</span>
-          </div>
-        </div>
-        <div className="summary-card">
           <div className="summary-icon daily">📅</div>
           <div className="summary-details">
             <span className="summary-label">Avg. Daily</span>
             <span className="summary-value">${summary.averageDaily}</span>
           </div>
+        </div>
+      </div>
+
+      {/* Toolbar with Sort and Quick Stats */}
+      <div className="transactions-toolbar">
+        <div className="sort-dropdown-wrapper">
+          <select 
+            className="sort-select-modern"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="highest">Highest Amount</option>
+            <option value="lowest">Lowest Amount</option>
+          </select>
+          <span className="sort-icon">▼</span>
+        </div>
+        
+        <div className="quick-stats">
+          <span>📊 {filteredTransactions.length} transactions</span>
+          <span>💰 Largest: ${quickStats.largestIncome?.toLocaleString() || 0}</span>
+          <span>📉 Smallest: ${Math.abs(quickStats.largestExpense || 0).toLocaleString()}</span>
         </div>
       </div>
 
@@ -189,8 +235,6 @@ const TransactionsPage = () => {
         <div className="transactions-header">
           <span>Date</span>
           <span>Description</span>
-          <span>Category</span>
-          <span>Status</span>
           <span>Amount</span>
         </div>
 
@@ -206,21 +250,11 @@ const TransactionsPage = () => {
                 })}
               </div>
               {groupedTransactions[date].map(transaction => (
-                <div key={transaction.id} className="transaction-row view-only">
+                <div key={transaction.id} className="transaction-row">
                   <span className="transaction-date">
                     {new Date(transaction.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
                   <span className="transaction-description">{transaction.description}</span>
-                  <span className="transaction-category">
-                    <span className={`category-badge category-${transaction.category.toLowerCase()}`}>
-                      {transaction.category}
-                    </span>
-                  </span>
-                  <span className="transaction-status">
-                    <span className={`status-badge status-${transaction.status}`}>
-                      {transaction.status}
-                    </span>
-                  </span>
                   <span className={`transaction-amount ${transaction.amount > 0 ? 'positive' : 'negative'}`}>
                     {transaction.amount > 0 ? '+' : ''}{transaction.amount.toFixed(2)}
                   </span>
