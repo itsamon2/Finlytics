@@ -25,6 +25,9 @@ public class BudgetManager {
     @Column(precision = 12, scale = 2)
     private BigDecimal amountSpent = BigDecimal.ZERO;
 
+    @Column(length = 20)
+    private String color;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "budget_period")
     private BudgetPeriod budgetPeriod;

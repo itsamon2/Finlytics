@@ -44,6 +44,18 @@ public class BudgetManagerService {
         });
     }
 
+    // Full update — category, budgetLimit, color, budgetPeriod
+    // amountSpent and creationDate are system-managed, never touched here
+    public Optional<BudgetManager> updateBudget(Long budgetId, BudgetManager updatedBudget) {
+        return budgetManagerRepo.findById(budgetId).map(existing -> {
+            existing.setCategory(updatedBudget.getCategory());
+            existing.setBudgetLimit(updatedBudget.getBudgetLimit());
+            existing.setColor(updatedBudget.getColor());
+            existing.setBudgetPeriod(updatedBudget.getBudgetPeriod());
+            return budgetManagerRepo.save(existing);
+        });
+    }
+
     // Auto update budget when a transaction is saved
     public void updateBudgetFromTransaction(Transactions transaction) {
         if (transaction.getType() == Transactions.TransactionType.EXPENSE) {
