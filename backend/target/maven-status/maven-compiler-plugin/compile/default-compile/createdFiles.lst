@@ -1,1 +1,15 @@
-com\Group2\Finylitics\FinyliticsApplication.class
+com\Group2\Finlytic\Config\CorsConfig$1.class
+com\Group2\Finlytic\Config\CorsConfig.class
+com\Group2\Finlytic\Model\BudgetManager$BudgetPeriod.class
+com\Group2\Finlytic\Service\CategorizationService.class
+com\Group2\Finlytic\FinlyticApplication.class
+com\Group2\Finlytic\repo\BudgetManagerRepo.class
+com\Group2\Finlytic\Service\BudgetManagerService.class
+com\Group2\Finlytic\Model\TransactionAnalysis.class
+com\Group2\Finlytic\Model\Transactions$TransactionType.class
+com\Group2\Finlytic\repo\Transactionsrepo.class
+com\Group2\Finlytic\Model\BudgetManager.class
+com\Group2\Finlytic\Controller\TransactionsController.class
+com\Group2\Finlytic\Model\Transactions.class
+com\Group2\Finlytic\Service\TransactionsService.class
+com\Group2\Finlytic\Controller\BudgetManagerController.class
