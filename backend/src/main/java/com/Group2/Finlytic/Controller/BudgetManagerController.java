@@ -2,6 +2,7 @@ package com.Group2.Finlytic.Controller;
 
 import com.Group2.Finlytic.Model.BudgetManager;
 import com.Group2.Finlytic.Service.BudgetManagerService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -42,6 +43,15 @@ public class BudgetManagerController {
     public Optional<BudgetManager> updateSpending(@PathVariable("id") Long id,
                                                   @RequestParam("amount") BigDecimal amount) {
         return budgetManagerService.updateAmountSpent(id, amount);
+    }
+
+    // Full update — handles Edit/Adjust from frontend modal
+    @PutMapping("/{id}")
+    public ResponseEntity<BudgetManager> updateBudget(@PathVariable("id") Long id,
+                                                      @RequestBody BudgetManager updatedBudget) {
+        return budgetManagerService.updateBudget(id, updatedBudget)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{id}/exceeded")
