@@ -27,4 +27,7 @@ public interface Transactionsrepo extends JpaRepository<Transactions, Long> {
             AND YEAR(t.creationDate) = YEAR(CURRENT_DATE)
             """)
     List<Transactions> findCurrentMonthIncome();
+
+    // Find transactions by category
+    List<Transactions> findByCategory(String category);
 }

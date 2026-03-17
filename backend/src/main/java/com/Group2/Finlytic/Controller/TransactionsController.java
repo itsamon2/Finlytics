@@ -32,6 +32,12 @@ public class TransactionsController {
         return transactionsService.getTransactionById(id);
     }
 
+    // Fetch transactions by category — powers the budget details modal recent transactions
+    @GetMapping("/category/{category}")
+    public List<Transactions> getTransactionsByCategory(@PathVariable("category") String category) {
+        return transactionsService.getTransactionsByCategory(category);
+    }
+
     @DeleteMapping("/{id}")
     public void deleteTransaction(@PathVariable("id") Long id) {
         transactionsService.deleteTransaction(id);

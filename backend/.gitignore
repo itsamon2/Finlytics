@@ -9,3 +9,5 @@
 target/
 .idea/
 *.log
+
+application-local.properties
