@@ -18,6 +18,7 @@ public class CategorizationService {
     private final ChatClient chatClient;
 
     public CategorizationService(ChatClient.Builder builder) {
+
         this.chatClient = builder.build();
     }
 
