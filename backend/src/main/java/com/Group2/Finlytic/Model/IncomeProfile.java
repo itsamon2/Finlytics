@@ -1,0 +1,29 @@
+package com.Group2.Finlytic.Model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+import javax.validation.constraints.NotNull;
+import java.math.BigDecimal;
+import java.util.Date;
+
+@Entity
+@Data
+@Table(name = "income_profile")
+public class IncomeProfile {
+
+    @Id
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
+    private Long incomeProfileId;
+
+    @Column(name = "income", nullable = false)
+    @NotNull(message = "Declared income must be provided")
+    private BigDecimal declaredMonthlyIncome;
+
+    @Column(name = "created_date", nullable = false)
+    private Date createdDate;
+
+    @Column(name = "updated_date", nullable = false)
+    private Date updatedDate;
+
+}
