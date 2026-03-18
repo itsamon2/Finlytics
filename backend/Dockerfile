@@ -1,17 +1,32 @@
-# Use official Java runtime as base image
-FROM eclipse-temurin:21-jdk-alpine
+# Stage 1: Build the Spring Boot app
+FROM maven:3.9.4-eclipse-temurin-21 AS build
 
-# Set working directory in container
+# Set working directory
 WORKDIR /app
 
-# Copy the Maven build JAR into the container
-COPY target/Finylitics-0.0.1-SNAPSHOT.jar app.jar
+# Copy pom.xml and download dependencies first (cacheable layer)
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
 
-# Expose the port your Spring Boot app will run on
+# Copy source code
+COPY src ./src
+
+# Build the JAR
+RUN mvn clean package -DskipTests
+
+# Stage 2: Run the app
+FROM eclipse-temurin:21-jdk-alpine
+
+WORKDIR /app
+
+# Copy JAR from build stage
+COPY --from=build /app/target/Finylitics-0.0.1-SNAPSHOT.jar app.jar
+
+# Expose port
 EXPOSE 8080
 
-# Environment variables (optional defaults)
+# Environment variable for Spring profile
 ENV SPRING_PROFILES_ACTIVE=prod
 
-# Run the Spring Boot JAR
+# Run the app
 ENTRYPOINT ["java","-jar","/app/app.jar"]
