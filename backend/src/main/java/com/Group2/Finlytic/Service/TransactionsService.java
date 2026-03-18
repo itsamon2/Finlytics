@@ -39,6 +39,7 @@ public class TransactionsService {
 
     // Get all transactions
     public List<Transactions> getAllTransactions() {
+
         return transactionsrepo.findAll();
     }
 
