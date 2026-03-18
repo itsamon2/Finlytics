@@ -6,6 +6,7 @@ import com.Group2.Finlytic.Service.GoalsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -40,8 +41,14 @@ public class GoalsController {
     }
 
     // Update only goal status (ACTIVE, PAUSED, COMPLETED)
-    @PatchMapping("/{id}/status")
+    @PatchMapping("/id/{id}/status")
     public Goals updateStatus(@PathVariable Long id, @RequestParam GoalStatus status) {
         return goalsService.updateStatus(id, status);
+    }
+
+
+    @GetMapping("/search")
+    public List<Goals> searchGoals(@RequestParam String goal_name){
+        return goalsService.getGoalsByName(goal_name);
     }
 }

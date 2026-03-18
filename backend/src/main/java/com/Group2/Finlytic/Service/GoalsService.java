@@ -45,4 +45,7 @@ public class GoalsService {
         return goalsRepo.findById(goalId)
                 .orElseThrow(() -> new RuntimeException("Goal not found with id: " + goalId));
     }
+    public List<Goals> getGoalsByName(String goal_name) {
+        return goalsRepo.findByGoalNameContainingIgnoreCase(goal_name);
+    }
 }
