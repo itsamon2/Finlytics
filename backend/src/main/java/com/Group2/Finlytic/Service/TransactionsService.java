@@ -6,8 +6,11 @@ import com.Group2.Finlytic.repo.Transactionsrepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class TransactionsService {
@@ -19,7 +22,7 @@ public class TransactionsService {
     private CategorizationService categorizationService;
 
     @Autowired
-    private BudgetManagerService budgetManagerService; // ← ADD THIS
+    private BudgetManagerService budgetManagerService;
 
     // Save transaction + auto-categorize
     public Transactions saveTransaction(Transactions transaction) {
@@ -30,7 +33,7 @@ public class TransactionsService {
             transaction.setAmount(analysis.amount());
         }
         Transactions saved = transactionsrepo.save(transaction);
-        budgetManagerService.updateBudgetFromTransaction(saved); // ← lowercase b
+        budgetManagerService.updateBudgetFromTransaction(saved);
         return saved;
     }
 
@@ -44,8 +47,35 @@ public class TransactionsService {
         return transactionsrepo.findById(transactionId);
     }
 
+    // Get transactions by category — used by budget details modal
+    public List<Transactions> getTransactionsByCategory(String category) {
+        return transactionsrepo.findByCategory(category);
+    }
+
     // Delete transaction
     public void deleteTransaction(Long transactionId) {
         transactionsrepo.deleteById(transactionId);
     }
+    public Map<String, BigDecimal> getMonthlyExpensesByCategory() {
+        List<Transactions> expenses = transactionsrepo.findCurrentMonthExpenses();
+
+        return expenses.stream()
+                .filter(t -> t.getCategory() != null)
+                .collect(
+                        Collectors.groupingBy(
+                                Transactions::getCategory,
+                                Collectors.reducing(BigDecimal.ZERO, Transactions::getAmount, BigDecimal::add)
+                        )
+                );
+    }
+
+    // Get total monthly income
+    public BigDecimal getMonthlyIncome() {
+        List<Transactions> incomeList = transactionsrepo.findCurrentMonthIncome();
+
+        return incomeList.stream()
+                .map(Transactions::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
 }

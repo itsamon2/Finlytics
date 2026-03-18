@@ -27,7 +27,7 @@ public class Transactions {
     private String rawMessage;
 
     @Column(name = "category")
-    private String category;  // AI will populate this
+    private String category;
 
     @CreationTimestamp
     @Column(name = "creation_date", updatable = false)

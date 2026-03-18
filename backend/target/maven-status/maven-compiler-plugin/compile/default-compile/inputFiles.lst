@@ -1,1 +1,12 @@
-C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finylitics\FinyliticsApplication.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\Config\CorsConfig.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\Controller\BudgetManagerController.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\Controller\TransactionsController.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\FinlyticApplication.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\Model\BudgetManager.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\Model\TransactionAnalysis.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\Model\Transactions.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\repo\BudgetManagerRepo.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\repo\Transactionsrepo.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\Service\BudgetManagerService.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\Service\CategorizationService.java
+C:\Users\orecy\Desktop\Finylitics\backend\src\main\java\com\Group2\Finlytic\Service\TransactionsService.java
