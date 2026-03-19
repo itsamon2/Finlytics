@@ -1,4 +1,0 @@
-[build]
-  base = "finylicts-frontend"
-  command = "npm run build"
-  publish = "finylicts-frontend/dist"
