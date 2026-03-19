@@ -1,6 +1,7 @@
 // src/pages/BudgetsPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './Budgets.styles.css';
+import { budgetService, transactionService } from '../service/api';
 
 const BudgetsPage = () => {
   const [viewMode, setViewMode] = useState('grid');
@@ -11,172 +12,149 @@ const BudgetsPage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustBudget, setAdjustBudget] = useState(null);
-  
-  const [budgets, setBudgets] = useState([
-    { 
-      id: 1,
-      category: 'Housing', 
-      budget: 1500, 
-      spent: 1200,
-      color: '#2DD4BF',
-      icon: '🏠',
-      trend: '-5%',
-      transactions: 8
-    },
-    { 
-      id: 2,
-      category: 'Food', 
-      budget: 800, 
-      spent: 650,
-      color: '#F59E0B',
-      icon: '🍔',
-      trend: '+2%',
-      transactions: 23
-    },
-    { 
-      id: 3,
-      category: 'Transport', 
-      budget: 500, 
-      spent: 420,
-      color: '#3B82F6',
-      icon: '🚗',
-      trend: '-8%',
-      transactions: 12
-    },
-    { 
-      id: 4,
-      category: 'Entertainment', 
-      budget: 400, 
-      spent: 310,
-      color: '#8B5CF6',
-      icon: '🎬',
-      trend: '-12%',
-      transactions: 6
-    },
-    { 
-      id: 5,
-      category: 'Utilities', 
-      budget: 300, 
-      spent: 280,
-      color: '#EC4899',
-      icon: '💡',
-      trend: '+3%',
-      transactions: 4
-    },
-    { 
-      id: 6,
-      category: 'Shopping', 
-      budget: 350, 
-      spent: 180,
-      color: '#EF4444',
-      icon: '🛍️',
-      trend: '-25%',
-      transactions: 5
-    }
-  ]);
+  const [adjustAmount, setAdjustAmount] = useState('');
 
+  // Live data state
+  const [rawBudgets, setRawBudgets] = useState([]);
+  const [categoryTransactions, setCategoryTransactions] = useState([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Form state for create
   const [newBudget, setNewBudget] = useState({
     category: '',
     budget: '',
     color: '#2DD4BF',
-    icon: '💰'
+    icon: '💰',
   });
 
-  const [adjustAmount, setAdjustAmount] = useState('');
-
-  const totalBudget = budgets.reduce((sum, b) => sum + b.budget, 0);
-  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
-  const remaining = totalBudget - totalSpent;
-  const savingsRate = Math.round((remaining / totalBudget) * 100);
-
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                  'July', 'August', 'September', 'October', 'November', 'December'];
-
-  const colorOptions = [
-    '#2DD4BF', '#F59E0B', '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444', '#10B981', '#F97316'
+  const months = [
+    'January','February','March','April','May','June',
+    'July','August','September','October','November','December',
   ];
 
-  const iconOptions = ['🏠', '🍔', '🚗', '🎬', '💡', '🛍️', '💰', '📚', '🏥', '✈️'];
+  const colorOptions = [
+    '#2DD4BF','#F59E0B','#3B82F6','#8B5CF6','#EC4899','#EF4444','#10B981','#F97316',
+  ];
 
-  // Month navigation
+  const iconOptions = ['🏠','🍔','🚗','🎬','💡','🛍️','💰','📚','🏥','✈️'];
+
+  // Derive icon from category name (backend doesn't store icons)
+  const getCategoryIcon = (category = '') => {
+    const map = {
+      FOOD: '🍔', GROCERIES: '🛒', TRANSPORT: '🚗', TRAVEL: '✈️',
+      HOUSING: '🏠', RENT: '🏠', ENTERTAINMENT: '🎬', UTILITIES: '💡',
+      SHOPPING: '🛍️', HEALTH: '🏥', EDUCATION: '📚', SALARY: '💼',
+      SAVINGS: '🏦', INVESTMENT: '📈',
+    };
+    const key = Object.keys(map).find(k => category.toUpperCase().includes(k));
+    return key ? map[key] : '💰';
+  };
+
+  // ─── Fetch budgets ──────────────────────────────────────────────────────────
+  const fetchBudgets = () => {
+    budgetService.getAll()
+      .then(data => { setRawBudgets(data); setLoading(false); })
+      .catch(err  => { setError(err.message); setLoading(false); });
+  };
+
+  useEffect(() => {
+    fetchBudgets();
+    const interval = setInterval(fetchBudgets, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ─── Map backend → same shape the original UI expects ──────────────────────
+  const budgets = useMemo(() => rawBudgets.map(b => ({
+    id:           b.budgetId,
+    category:     b.category,
+    budget:       parseFloat(b.budgetLimit),
+    spent:        parseFloat(b.amountSpent),
+    color:        b.color || '#2DD4BF',
+    icon:         getCategoryIcon(b.category),
+    trend:        '—',           // backend has no trend; shown as dash
+    transactions: 0,             // filled in details modal from transactionService
+    budgetPeriod: b.budgetPeriod || 'MONTHLY',
+  })), [rawBudgets]);
+
+  // ─── Totals ─────────────────────────────────────────────────────────────────
+  const totalBudget = budgets.reduce((sum, b) => sum + b.budget, 0);
+  const totalSpent  = budgets.reduce((sum, b) => sum + b.spent,  0);
+  const remaining   = totalBudget - totalSpent;
+  const savingsRate = totalBudget > 0 ? Math.round((remaining / totalBudget) * 100) : 0;
+
+  // ─── Month nav ──────────────────────────────────────────────────────────────
   const changeMonth = (direction) => {
     const [month, year] = selectedMonth.split(' ');
     let monthIndex = months.indexOf(month);
     let currentYear = parseInt(year);
-    
     monthIndex += direction;
-    
-    if (monthIndex < 0) {
-      monthIndex = 11;
-      currentYear -= 1;
-    } else if (monthIndex > 11) {
-      monthIndex = 0;
-      currentYear += 1;
-    }
-    
+    if (monthIndex < 0)  { monthIndex = 11; currentYear -= 1; }
+    if (monthIndex > 11) { monthIndex = 0;  currentYear += 1; }
     setSelectedMonth(`${months[monthIndex]} ${currentYear}`);
   };
 
-  // Export functionality
+  // ─── Export ─────────────────────────────────────────────────────────────────
   const handleExport = () => {
     const csvContent = [
-      ['Category', 'Budget', 'Spent', 'Remaining', 'Spent %', 'Transactions'],
+      ['Category','Budget','Spent','Remaining','Spent %'],
       ...budgets.map(b => [
-        b.category,
-        b.budget,
-        b.spent,
+        b.category, b.budget, b.spent,
         b.budget - b.spent,
         Math.round((b.spent / b.budget) * 100) + '%',
-        b.transactions
-      ])
+      ]),
     ].map(row => row.join(',')).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const url  = window.URL.createObjectURL(blob);
+    const a    = document.createElement('a');
     a.href = url;
     a.download = `budgets-${selectedMonth.replace(' ', '-')}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-    
-    // Show success message
     alert(`✅ Exported ${budgets.length} budgets for ${selectedMonth}`);
   };
 
-  // Create budget
+  // ─── Create budget → POST to backend ────────────────────────────────────────
   const handleCreateBudget = () => {
     if (!newBudget.category || !newBudget.budget) {
       alert('Please fill in all fields');
       return;
     }
-
-    const budgetAmount = parseFloat(newBudget.budget);
-    
-    const createdBudget = {
-      id: budgets.length + 1,
-      category: newBudget.category,
-      budget: budgetAmount,
-      spent: 0,
-      remaining: budgetAmount,
-      color: newBudget.color,
-      icon: newBudget.icon,
-      trend: '0%',
-      transactions: 0
+    // icon is UI-only — not stored in backend, derived at render time
+    const payload = {
+      category:     newBudget.category.toUpperCase(),
+      budgetLimit:  parseFloat(newBudget.budget),
+      color:        newBudget.color,
+      budgetPeriod: 'MONTHLY',
     };
-
-    setBudgets([...budgets, createdBudget]);
-    setShowCreateModal(false);
-    setNewBudget({ category: '', budget: '', color: '#2DD4BF', icon: '💰' });
-    alert(`✅ Budget created for ${newBudget.category}`);
+    budgetService.create(payload)
+      .then(() => {
+        fetchBudgets();
+        setShowCreateModal(false);
+        setNewBudget({ category: '', budget: '', color: '#2DD4BF', icon: '💰' });
+        alert(`✅ Budget created for ${newBudget.category}`);
+      })
+      .catch(err => alert(`Failed to create budget: ${err.message}`));
   };
 
-  // View details
+  // ─── View details → fetch real transactions for that category ───────────────
   const handleViewDetails = (budget) => {
     setSelectedBudget(budget);
+    setCategoryTransactions([]);
+    setLoadingTransactions(true);
     setShowDetailsModal(true);
+    transactionService.getByCategory(budget.category)
+      .then(data => {
+        const sorted = data.sort((a, b) => b.transactionId - a.transactionId).slice(0, 5);
+        setCategoryTransactions(sorted);
+      })
+      .catch(() => setCategoryTransactions([]))
+      .finally(() => setLoadingTransactions(false));
   };
 
-  // Adjust budget
+  // ─── Adjust budget → PUT to backend ─────────────────────────────────────────
   const handleAdjustClick = (budget) => {
     setAdjustBudget(budget);
     setAdjustAmount(budget.budget.toString());
@@ -189,37 +167,44 @@ const BudgetsPage = () => {
       alert('Please enter a valid amount');
       return;
     }
-
-    const updatedBudgets = budgets.map(b => 
-      b.id === adjustBudget.id 
-        ? { 
-            ...b, 
-            budget: newAmount,
-            remaining: newAmount - b.spent
-          }
-        : b
-    );
-
-    setBudgets(updatedBudgets);
-    setShowAdjustModal(false);
-    setAdjustBudget(null);
-    alert(`✅ Budget adjusted to $${newAmount.toLocaleString()}`);
+    budgetService.update(adjustBudget.id, {
+      category:     adjustBudget.category,
+      budgetLimit:  newAmount,
+      color:        adjustBudget.color,
+      budgetPeriod: adjustBudget.budgetPeriod,
+    })
+      .then(() => {
+        fetchBudgets();
+        setShowAdjustModal(false);
+        setAdjustBudget(null);
+        alert(`✅ Budget adjusted to Ksh ${newAmount.toLocaleString()}`);
+      })
+      .catch(err => alert(`Failed to adjust budget: ${err.message}`));
   };
 
-  // Delete budget
-  const handleDeleteClick = (id) => {
-    setShowDeleteConfirm(id);
-  };
+  // ─── Delete budget → DELETE to backend ──────────────────────────────────────
+  const handleDeleteClick  = (id) => setShowDeleteConfirm(id);
 
   const handleDeleteBudget = () => {
-    const deletedBudget = budgets.find(b => b.id === showDeleteConfirm);
-    setBudgets(budgets.filter(b => b.id !== showDeleteConfirm));
-    setShowDeleteConfirm(null);
-    alert(`🗑️ Budget deleted: ${deletedBudget.category}`);
+    const target = budgets.find(b => b.id === showDeleteConfirm);
+    budgetService.delete(showDeleteConfirm)
+      .then(() => {
+        fetchBudgets();
+        setShowDeleteConfirm(null);
+        if (showDetailsModal) setShowDetailsModal(false);
+        alert(`🗑️ Budget deleted: ${target?.category}`);
+      })
+      .catch(err => alert(`Failed to delete budget: ${err.message}`));
   };
 
+  // ─── Loading / Error ─────────────────────────────────────────────────────────
+  if (loading) return <div className="loading">Loading budgets...</div>;
+  if (error)   return <div className="error">Error: {error}</div>;
+
+  // ════════════════════════════════════════════════════════════════════════════
   return (
     <div className="budgets-page">
+
       {/* Header Section */}
       <div className="budgets-header">
         <div>
@@ -242,21 +227,21 @@ const BudgetsPage = () => {
           <div className="card-icon">💰</div>
           <div className="card-content">
             <span className="card-label">Total Budget</span>
-            <span className="card-value">${totalBudget.toLocaleString()}</span>
+            <span className="card-value">Ksh {totalBudget.toLocaleString()}</span>
           </div>
         </div>
         <div className="overview-card spent">
           <div className="card-icon">📊</div>
           <div className="card-content">
             <span className="card-label">Total Spent</span>
-            <span className="card-value">${totalSpent.toLocaleString()}</span>
+            <span className="card-value">Ksh {totalSpent.toLocaleString()}</span>
           </div>
         </div>
         <div className="overview-card remaining">
           <div className="card-icon">💵</div>
           <div className="card-content">
             <span className="card-label">Remaining</span>
-            <span className="card-value">${remaining.toLocaleString()}</span>
+            <span className="card-value">Ksh {remaining.toLocaleString()}</span>
           </div>
         </div>
         <div className="overview-card savings">
@@ -278,7 +263,9 @@ const BudgetsPage = () => {
           <div className="health-progress" style={{ width: `${100 - savingsRate}%` }}></div>
         </div>
         <p className="health-note">
-          You're doing great! You've saved {savingsRate}% of your total budget.
+          {savingsRate > 0
+            ? `You're doing great! You've saved ${savingsRate}% of your total budget.`
+            : `You've used your full budget this month.`}
         </p>
       </div>
 
@@ -290,13 +277,13 @@ const BudgetsPage = () => {
           <button className="month-nav" onClick={() => changeMonth(1)}>→</button>
         </div>
         <div className="view-toggle">
-          <button 
+          <button
             className={`toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
             onClick={() => setViewMode('grid')}
           >
             <span>⊞</span> Grid
           </button>
-          <button 
+          <button
             className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
             onClick={() => setViewMode('list')}
           >
@@ -311,7 +298,7 @@ const BudgetsPage = () => {
           {budgets.map((budget) => {
             const percentage = (budget.spent / budget.budget) * 100;
             const status = percentage > 90 ? 'danger' : percentage > 75 ? 'warning' : 'good';
-            
+
             return (
               <div key={budget.id} className={`budget-card ${status}`}>
                 <div className="card-header">
@@ -321,7 +308,7 @@ const BudgetsPage = () => {
                     </div>
                     <div>
                       <h3>{budget.category}</h3>
-                      <span className="budget-trend">{budget.trend} vs last month</span>
+                      <span className="budget-trend">{budget.budgetPeriod}</span>
                     </div>
                   </div>
                   <button className="menu-btn" onClick={() => handleDeleteClick(budget.id)}>🗑️</button>
@@ -330,16 +317,16 @@ const BudgetsPage = () => {
                 <div className="budget-details">
                   <div className="amount-row">
                     <span>Budget</span>
-                    <strong>${budget.budget.toLocaleString()}</strong>
+                    <strong>Ksh {budget.budget.toLocaleString()}</strong>
                   </div>
                   <div className="amount-row">
                     <span>Spent</span>
-                    <strong>${budget.spent.toLocaleString()}</strong>
+                    <strong>Ksh {budget.spent.toLocaleString()}</strong>
                   </div>
                   <div className="amount-row">
                     <span>Remaining</span>
                     <strong className={budget.budget - budget.spent > 0 ? 'positive' : 'negative'}>
-                      ${(budget.budget - budget.spent).toLocaleString()}
+                      Ksh {(budget.budget - budget.spent).toLocaleString()}
                     </strong>
                   </div>
                 </div>
@@ -350,11 +337,11 @@ const BudgetsPage = () => {
                     <span style={{ color: budget.color }}>{Math.round(percentage)}%</span>
                   </div>
                   <div className="progress-bar">
-                    <div 
+                    <div
                       className="progress-fill"
-                      style={{ 
-                        width: `${percentage}%`,
-                        backgroundColor: budget.color
+                      style={{
+                        width: `${Math.min(percentage, 100)}%`,
+                        backgroundColor: budget.budget - budget.spent < 0 ? '#EF4444' : budget.color,
                       }}
                     ></div>
                   </div>
@@ -381,7 +368,7 @@ const BudgetsPage = () => {
           </div>
           {budgets.map((budget) => {
             const percentage = (budget.spent / budget.budget) * 100;
-            
+
             return (
               <div key={budget.id} className="list-row">
                 <div className="category-cell">
@@ -390,19 +377,19 @@ const BudgetsPage = () => {
                   </span>
                   <span>{budget.category}</span>
                 </div>
-                <div>${budget.budget.toLocaleString()}</div>
-                <div>${budget.spent.toLocaleString()}</div>
+                <div>Ksh {budget.budget.toLocaleString()}</div>
+                <div>Ksh {budget.spent.toLocaleString()}</div>
                 <div className={budget.budget - budget.spent > 0 ? 'positive' : 'negative'}>
-                  ${(budget.budget - budget.spent).toLocaleString()}
+                  Ksh {(budget.budget - budget.spent).toLocaleString()}
                 </div>
                 <div className="progress-cell">
                   <div className="list-progress">
                     <div className="list-progress-bar">
-                      <div 
+                      <div
                         className="list-progress-fill"
-                        style={{ 
-                          width: `${percentage}%`,
-                          backgroundColor: budget.color
+                        style={{
+                          width: `${Math.min(percentage, 100)}%`,
+                          backgroundColor: budget.budget - budget.spent < 0 ? '#EF4444' : budget.color,
                         }}
                       ></div>
                     </div>
@@ -431,18 +418,18 @@ const BudgetsPage = () => {
                 <label>Category Name</label>
                 <input
                   type="text"
-                  placeholder="e.g., Groceries, Rent, Entertainment"
+                  placeholder="e.g., FOOD, TRANSPORT, HOUSING"
                   value={newBudget.category}
-                  onChange={(e) => setNewBudget({...newBudget, category: e.target.value})}
+                  onChange={(e) => setNewBudget({ ...newBudget, category: e.target.value })}
                 />
               </div>
               <div className="form-group">
-                <label>Monthly Budget ($)</label>
+                <label>Monthly Budget (Ksh)</label>
                 <input
                   type="number"
                   placeholder="0.00"
                   value={newBudget.budget}
-                  onChange={(e) => setNewBudget({...newBudget, budget: e.target.value})}
+                  onChange={(e) => setNewBudget({ ...newBudget, budget: e.target.value })}
                 />
               </div>
               <div className="form-row">
@@ -453,7 +440,7 @@ const BudgetsPage = () => {
                       <button
                         key={icon}
                         className={`icon-option ${newBudget.icon === icon ? 'active' : ''}`}
-                        onClick={() => setNewBudget({...newBudget, icon})}
+                        onClick={() => setNewBudget({ ...newBudget, icon })}
                       >
                         {icon}
                       </button>
@@ -468,7 +455,7 @@ const BudgetsPage = () => {
                         key={color}
                         className={`color-option ${newBudget.color === color ? 'active' : ''}`}
                         style={{ backgroundColor: color }}
-                        onClick={() => setNewBudget({...newBudget, color})}
+                        onClick={() => setNewBudget({ ...newBudget, color })}
                       />
                     ))}
                   </div>
@@ -483,49 +470,74 @@ const BudgetsPage = () => {
         </div>
       )}
 
-      {/* View Details Modal */}
+      {/* View Details Modal — now shows real transactions from backend */}
       {showDetailsModal && selectedBudget && (
         <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
           <div className="modal-content details-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{selectedBudget.category} Details</h2>
+              <h2>{selectedBudget.icon} {selectedBudget.category} Details</h2>
               <button className="close-btn" onClick={() => setShowDetailsModal(false)}>×</button>
             </div>
             <div className="modal-body">
               <div className="details-summary">
                 <div className="detail-item">
                   <span>Budget</span>
-                  <strong>${selectedBudget.budget.toLocaleString()}</strong>
+                  <strong>Ksh {selectedBudget.budget.toLocaleString()}</strong>
                 </div>
                 <div className="detail-item">
                   <span>Spent</span>
-                  <strong>${selectedBudget.spent.toLocaleString()}</strong>
+                  <strong>Ksh {selectedBudget.spent.toLocaleString()}</strong>
                 </div>
                 <div className="detail-item">
                   <span>Remaining</span>
                   <strong className={selectedBudget.budget - selectedBudget.spent > 0 ? 'positive' : 'negative'}>
-                    ${(selectedBudget.budget - selectedBudget.spent).toLocaleString()}
+                    Ksh {(selectedBudget.budget - selectedBudget.spent).toLocaleString()}
                   </strong>
                 </div>
               </div>
+
               <div className="details-stats">
                 <div className="stat-box">
                   <span>Transactions</span>
-                  <h3>{selectedBudget.transactions}</h3>
+                  <h3>{loadingTransactions ? '...' : categoryTransactions.length}</h3>
                 </div>
                 <div className="stat-box">
                   <span>Avg. Transaction</span>
-                  <h3>${Math.round(selectedBudget.spent / selectedBudget.transactions).toLocaleString()}</h3>
+                  <h3>
+                    Ksh {categoryTransactions.length > 0
+                      ? Math.round(selectedBudget.spent / categoryTransactions.length).toLocaleString()
+                      : 0}
+                  </h3>
                 </div>
                 <div className="stat-box">
                   <span>Daily Avg</span>
-                  <h3>${Math.round(selectedBudget.spent / 30).toLocaleString()}</h3>
+                  <h3>Ksh {Math.round(selectedBudget.spent / 30).toLocaleString()}</h3>
                 </div>
                 <div className="stat-box">
-                  <span>Trend</span>
-                  <h3 style={{ color: selectedBudget.trend.includes('+') ? '#10B981' : '#EF4444' }}>
-                    {selectedBudget.trend}
-                  </h3>
+                  <span>Period</span>
+                  <h3>{selectedBudget.budgetPeriod}</h3>
+                </div>
+              </div>
+
+              {/* Recent transactions */}
+              <div className="recent-transactions-preview">
+                <h3>Recent Transactions</h3>
+                <div className="preview-list">
+                  {loadingTransactions ? (
+                    <p className="no-preview">Loading...</p>
+                  ) : categoryTransactions.length > 0 ? (
+                    categoryTransactions.map(t => (
+                      <div key={t.transactionId} className="preview-item">
+                        <span className="preview-desc">
+                          {t.rawMessage?.length > 40 ? t.rawMessage.substring(0, 40) + '…' : t.rawMessage}
+                        </span>
+                        <span className="preview-date">{t.creationDate}</span>
+                        <span className="preview-amount negative">-Ksh {t.amount?.toLocaleString()}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="no-preview">No transactions yet for this category</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -550,7 +562,7 @@ const BudgetsPage = () => {
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>New Budget Amount ($)</label>
+                <label>New Budget Amount (Ksh)</label>
                 <input
                   type="number"
                   value={adjustAmount}
@@ -560,8 +572,8 @@ const BudgetsPage = () => {
                 />
               </div>
               <div className="current-info">
-                <p>Current budget: <strong>${adjustBudget.budget.toLocaleString()}</strong></p>
-                <p>Spent so far: <strong>${adjustBudget.spent.toLocaleString()}</strong></p>
+                <p>Current budget: <strong>Ksh {adjustBudget.budget.toLocaleString()}</strong></p>
+                <p>Spent so far: <strong>Ksh {adjustBudget.spent.toLocaleString()}</strong></p>
               </div>
             </div>
             <div className="modal-footer">
@@ -590,6 +602,7 @@ const BudgetsPage = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };
