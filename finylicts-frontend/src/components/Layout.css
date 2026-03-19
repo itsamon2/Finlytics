@@ -1,48 +1,30 @@
 .app-layout {
   display: flex;
   min-height: 100vh;
-  width: 100%;
-  max-width: 100%;
-  background: #F5F7FA;
+  background: var(--bg-primary);
 }
 
 .main-content {
   flex: 1;
+  margin-left: 260px;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-  background: #F5F7FA;
-}
-
-.top-header {
-  height: 70px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #E2E8F0;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 0 32px;
-  width: 100%;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  background: #2DD4BF;
-  color: #FFFFFF;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  cursor: pointer;
+  background: var(--bg-primary);
 }
 
 .content-area {
+  padding: 24px 32px;
   flex: 1;
-  width: 100%;
-  max-width: 100%;
-  background: #F5F7FA;
+  background: var(--bg-primary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .content-area {
+    padding: 16px;
+  }
 }
