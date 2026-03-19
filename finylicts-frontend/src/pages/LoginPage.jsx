@@ -194,7 +194,7 @@ const LoginPage = () => {
                 </>
               ) : (
                 <>
-                  Sign In
+                  Login In
                   <FiArrowRight className="button-icon" />
                 </>
               )}

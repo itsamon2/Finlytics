@@ -15,15 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const REAL_ACCOUNT = {
-    email: 'munch@finlytics.com',
-    password: 'Finlytics2026!',
-    name: 'Jai Munchkin',
-    id: 1
-  };
-
   useEffect(() => {
-    // Check for saved user in localStorage
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
@@ -31,20 +23,22 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // Login function
   const login = async (email, password) => {
     setError('');
-    
-    // Simulate API delay for animation
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     try {
-      // Check against the single real account
-      if (email === REAL_ACCOUNT.email && password === REAL_ACCOUNT.password) {
+      // This would be replaced with actual API call
+      if (email === 'john@finlytics.com' && password === 'Finlytics2026!') {
         const userData = {
-          id: REAL_ACCOUNT.id,
-          email: REAL_ACCOUNT.email,
-          name: REAL_ACCOUNT.name,
+          id: 1,
+          name: 'Capt HM',
+          email: 'john@finlytics.com',
+          phone: '+254712345678',
+          location: 'Nairobi, Kenya',
+          bio: 'Financial enthusiast passionate about budgeting and saving for the future.',
+          joinDate: 'January 2026',
+          avatar: null,
           createdAt: new Date().toISOString()
         };
         
@@ -60,29 +54,41 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register function
-  const register = async (name, email, password) => {
+  const register = async (name, email, password, phone, location) => {
     setError('');
-    
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     try {
-      // will be saved to a database
-      // For now, we'll create a new user account
-      if (name && email && password) {
+      if (name && email && password && phone) {
         const userData = {
           id: Date.now(),
-          name,
+          name: name.trim(),
           email,
+          phone,
+          location: location || '',
+          bio: '',
+          joinDate: new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
+          avatar: null,
           createdAt: new Date().toISOString()
         };
         
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Also save to profile settings for consistency
+        localStorage.setItem('profileSettings', JSON.stringify({
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          location: userData.location,
+          bio: userData.bio,
+          joinDate: userData.joinDate,
+          avatar: userData.avatar
+        }));
+        
         return { success: true };
       } else {
-        throw new Error('Please fill in all fields');
+        throw new Error('Please fill in all required fields');
       }
     } catch (err) {
       setError(err.message);
@@ -90,22 +96,43 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout function
+  const updateProfile = async (profileData) => {
+    setError('');
+    
+    try {
+      const updatedUser = {
+        ...user,
+        name: profileData.name,
+        email: profileData.email,
+        phone: profileData.phone,
+        location: profileData.location,
+        bio: profileData.bio,
+        avatar: profileData.avatar,
+        joinDate: profileData.joinDate
+      };
+      
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('profileSettings', JSON.stringify(profileData));
+      
+      return { success: true };
+    } catch (err) {
+      setError(err.message);
+      return { success: false, error: err.message };
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
   };
 
-  // Forgot password
   const forgotPassword = async (email) => {
     setError('');
-    
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     try {
       if (email) {
-        // will send a reset email
         return { success: true };
       } else {
         throw new Error('Please enter your email');
@@ -123,7 +150,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    forgotPassword
+    forgotPassword,
+    updateProfile
   };
 
   return (
