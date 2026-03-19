@@ -9,7 +9,7 @@ const TransactionsPage = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [expandedRow, setExpandedRow] = useState(null); // ← tracks which row is open
+  const [expandedRow, setExpandedRow] = useState(null); 
 
 useEffect(() => {
     const fetchTransactions = () => {
