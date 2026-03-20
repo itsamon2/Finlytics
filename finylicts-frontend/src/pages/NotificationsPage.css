@@ -1,0 +1,148 @@
+.notifications-page {
+  padding: 24px 32px;
+  width: 100%;
+  background: var(--bg-primary);
+  min-height: 100%;
+}
+
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.notifications-header h1 {
+  font-size: 28px;
+  color: var(--text-primary);
+  margin: 0;
+  font-weight: 600;
+}
+
+.mark-read-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mark-read-btn:hover {
+  background: var(--hover-bg);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notification-card {
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.notification-card:hover {
+  transform: translateX(4px);
+  box-shadow: 0 8px 16px var(--shadow-color);
+}
+
+.notification-card.warning {
+  border-left: 4px solid var(--warning-color);
+}
+
+.notification-card.success {
+  border-left: 4px solid var(--success-color);
+}
+
+.notification-card.info {
+  border-left: 4px solid #3B82F6;
+}
+
+.notification-card.unread {
+  background: var(--accent-soft);
+}
+
+.notification-card-content {
+  flex: 1;
+}
+
+.notification-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.notification-card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notification-time {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.notification-message {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  margin-left: 12px;
+  align-self: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .notifications-page {
+    padding: 16px;
+  }
+  
+  .notifications-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .notification-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notification-card {
+    padding: 16px;
+  }
+  
+  .notification-card-header h3 {
+    font-size: 14px;
+  }
+  
+  .notification-message {
+    font-size: 13px;
+  }
+}

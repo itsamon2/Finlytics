@@ -5,13 +5,19 @@ import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
+import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import TransactionsPage from './pages/TransactionsPage';
 import BudgetsPage from './pages/BudgetsPage';
 import GoalsPage from './pages/GoalsPage';
+import FeasibilityPage from './pages/FeasibilityPage';
+import AdvisoryPage from './pages/AdvisoryPage';
+import ScenariosPage from './pages/ScenariosPage';
+import TaxHealthPage from './pages/TaxHealthPage';
 import SettingsPage from './pages/SettingsPage';
+import NotificationsPage from './pages/NotificationsPage';
 import './App.css';
 
 // Placeholder pages
@@ -38,13 +44,19 @@ function App() {
             }>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="profile" element={<ProfilePage />} />
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="budgets" element={<BudgetsPage />} />
               <Route path="goals" element={<GoalsPage />} />
               <Route path="analysis" element={<AnalysisPage />} />
               <Route path="tools" element={<ToolsPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="feasibility" element={<FeasibilityPage />} />
+              <Route path="advisory" element={<AdvisoryPage />} />
+              <Route path="scenarios" element={<ScenariosPage />} />
+              <Route path="tax-health" element={<TaxHealthPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

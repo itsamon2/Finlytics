@@ -1,23 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
+import { FiUser, FiMail, FiPhone, FiMapPin, FiCalendar, FiCamera, FiSave, FiEdit2, FiBell, FiLock, FiEye, FiEyeOff, FiArrowRight } from 'react-icons/fi';
 import './Settings.styles.css';
 
 const SettingsPage = () => {
   const { theme, toggleTheme, accentColor, setAccentColor } = useTheme();
+  const { user, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [saveStatus, setSaveStatus] = useState('');
   
-  // Profile settings
-  const [profileForm, setProfileForm] = useState(() => {
-    const saved = localStorage.getItem('profileSettings');
-    return saved ? JSON.parse(saved) : {
-      name: 'Munchkin',
-      email: 'munchkin@example.com',
-      currency: 'USD',
-      dateFormat: 'MM/DD/YYYY',
-      language: 'English'
-    };
+  // Profile settings - initialized from user context
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+    bio: '',
+    joinDate: '',
+    avatar: null
   });
+  const [originalProfile, setOriginalProfile] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Notification settings
   const [notifications, setNotifications] = useState(() => {
@@ -59,6 +65,9 @@ const SettingsPage = () => {
   });
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const colorOptions = [
     { name: 'Teal', value: '#2DD4BF' },
@@ -70,6 +79,36 @@ const SettingsPage = () => {
     { name: 'Red', value: '#EF4444' }
   ];
 
+  // Load user data from auth context (this gets data from registration)
+  useEffect(() => {
+    if (user) {
+      const userProfile = {
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        location: user.location || '',
+        bio: user.bio || '',
+        joinDate: user.joinDate || new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
+        avatar: user.avatar || null
+      };
+      setProfileData(userProfile);
+      setOriginalProfile(userProfile);
+    } else {
+      // Fallback if no user (shouldn't happen on protected page)
+      const mockProfile = {
+        name: 'Your name',
+        email: 'name@example.com',
+        phone: '+254 712 345 678',
+        location: 'Nakuru, Kenya',
+        bio: 'Financial enthusiast passionate about budgeting and saving for the future.',
+        joinDate: 'January 2026',
+        avatar: null
+      };
+      setProfileData(mockProfile);
+      setOriginalProfile(mockProfile);
+    }
+  }, [user]);
+
   // Load settings from localStorage on mount
   useEffect(() => {
     if (appearance.compactView) {
@@ -79,10 +118,82 @@ const SettingsPage = () => {
     }
   }, [appearance.compactView]);
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: 'spring', stiffness: 300, damping: 24 }
+    }
+  };
+
   // Profile handlers
-  const handleProfileChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setProfileForm(prev => ({ ...prev, [name]: value }));
+    setProfileData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileData(prev => ({
+          ...prev,
+          avatar: reader.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setIsLoading(true);
+    setSaveStatus('');
+    
+    // Update profile through auth context (syncs with user data)
+    const result = await updateProfile(profileData);
+    
+    if (result.success) {
+      setOriginalProfile(profileData);
+      setIsEditing(false);
+      setSaveStatus('✓ Profile updated successfully!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    } else {
+      setSaveStatus('✗ Failed to update profile');
+      setTimeout(() => setSaveStatus(''), 3000);
+    }
+    
+    setIsLoading(false);
+  };
+
+  const handleCancelEdit = () => {
+    setProfileData(originalProfile);
+    setIsEditing(false);
+  };
+
+  const getInitials = () => {
+    return profileData.name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   // Notification handlers
@@ -97,6 +208,40 @@ const SettingsPage = () => {
     } else {
       setSecurity(prev => ({ ...prev, [key]: value }));
     }
+  };
+
+  // Password change
+  const handlePasswordChange = (e) => {
+    setPasswordData({
+      ...passwordData,
+      [e.target.name]: e.target.value
+    });
+    setPasswordError('');
+    setPasswordSuccess('');
+  };
+
+  const handleChangePassword = () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+    
+    if (!passwordData.current || !passwordData.new || !passwordData.confirm) {
+      setPasswordError('All fields are required');
+      return;
+    }
+    
+    if (passwordData.new !== passwordData.confirm) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+    
+    if (passwordData.new.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return;
+    }
+    
+    setPasswordSuccess('Password changed successfully!');
+    setPasswordData({ current: '', new: '', confirm: '' });
+    setTimeout(() => setPasswordSuccess(''), 3000);
   };
 
   // Appearance handlers
@@ -120,47 +265,9 @@ const SettingsPage = () => {
     setAccentColor(color);
   };
 
-  // Password change
-  const handlePasswordChange = (e) => {
-    setPasswordData({
-      ...passwordData,
-      [e.target.name]: e.target.value
-    });
-    setPasswordError('');
-    setPasswordSuccess('');
-  };
-
-  const handleChangePassword = () => {
-    setPasswordError('');
-    setPasswordSuccess('');
-    
-    // Validation
-    if (!passwordData.current || !passwordData.new || !passwordData.confirm) {
-      setPasswordError('All fields are required');
-      return;
-    }
-    
-    if (passwordData.new !== passwordData.confirm) {
-      setPasswordError('New passwords do not match');
-      return;
-    }
-    
-    if (passwordData.new.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
-      return;
-    }
-    
-    // For now, we'll just show success
-    setPasswordSuccess('Password changed successfully!');
-    setPasswordData({ current: '', new: '', confirm: '' });
-    
-    // Clear success message after 3 seconds
-    setTimeout(() => setPasswordSuccess(''), 3000);
-  };
-
   // Save all settings
   const handleSave = () => {
-    localStorage.setItem('profileSettings', JSON.stringify(profileForm));
+    // Profile is saved separately through handleSaveProfile
     localStorage.setItem('notificationSettings', JSON.stringify(notifications));
     localStorage.setItem('securitySettings', JSON.stringify(security));
     localStorage.setItem('appearanceSettings', JSON.stringify(appearance));
@@ -173,11 +280,13 @@ const SettingsPage = () => {
   const handleReset = () => {
     if (window.confirm('Reset all settings to default?')) {
       const defaultProfile = {
-        name: 'Munchkin',
-        email: 'munchkin@example.com',
-        currency: 'USD',
-        dateFormat: 'MM/DD/YYYY',
-        language: 'English'
+        name: user?.name || 'Your name',
+        email: user?.email || 'name@example.com',
+        phone: '+254 712 345 678',
+        location: 'Nakuru, Kenya',
+        bio: 'Financial enthusiast passionate about budgeting and saving for the future.',
+        joinDate: 'January 2026',
+        avatar: null
       };
       
       const defaultNotifications = {
@@ -200,7 +309,8 @@ const SettingsPage = () => {
         showAvatars: true
       };
       
-      setProfileForm(defaultProfile);
+      setProfileData(defaultProfile);
+      setOriginalProfile(defaultProfile);
       setNotifications(defaultNotifications);
       setSecurity(defaultSecurity);
       setAppearance(defaultAppearance);
@@ -208,13 +318,7 @@ const SettingsPage = () => {
       
       document.body.classList.remove('compact-view');
       
-      // Save defaults to localStorage
-      localStorage.setItem('profileSettings', JSON.stringify(defaultProfile));
-      localStorage.setItem('notificationSettings', JSON.stringify(defaultNotifications));
-      localStorage.setItem('securitySettings', JSON.stringify(defaultSecurity));
-      localStorage.setItem('appearanceSettings', JSON.stringify(defaultAppearance));
-      localStorage.setItem('accentColor', '#2DD4BF');
-      
+      localStorage.clear();
       setSaveStatus('✓ Settings reset to default');
       setTimeout(() => setSaveStatus(''), 3000);
     }
@@ -223,7 +327,7 @@ const SettingsPage = () => {
   // Export settings
   const handleExport = () => {
     const exportData = {
-      profile: profileForm,
+      profile: profileData,
       notifications: notifications,
       security: security,
       appearance: appearance,
@@ -259,7 +363,10 @@ const SettingsPage = () => {
         try {
           const importedData = JSON.parse(event.target.result);
           
-          if (importedData.profile) setProfileForm(importedData.profile);
+          if (importedData.profile) {
+            setProfileData(importedData.profile);
+            setOriginalProfile(importedData.profile);
+          }
           if (importedData.notifications) setNotifications(importedData.notifications);
           if (importedData.security) setSecurity(importedData.security);
           if (importedData.appearance) {
@@ -288,14 +395,18 @@ const SettingsPage = () => {
     if (window.confirm('⚠️ Are you sure you want to clear ALL your data? This will reset all settings and cannot be undone!')) {
       localStorage.clear();
       
-      // Reset to defaults
-      setProfileForm({
-        name: 'Munchkin',
-        email: 'munchkin@example.com',
-        currency: 'USD',
-        dateFormat: 'MM/DD/YYYY',
-        language: 'English'
-      });
+      const defaultProfile = {
+        name: user?.name || 'Your name',
+        email: user?.email || 'name@example.com',
+        phone: '+254 712 345 678',
+        location: 'Nakuru, Kenya',
+        bio: 'Financial enthusiast passionate about budgeting and saving for the future.',
+        joinDate: 'January 2026',
+        avatar: null
+      };
+      
+      setProfileData(defaultProfile);
+      setOriginalProfile(defaultProfile);
       setNotifications({
         emailAlerts: true,
         pushNotifications: false,
@@ -330,7 +441,6 @@ const SettingsPage = () => {
         if (confirmation === 'DELETE') {
           localStorage.clear();
           alert('Your account has been deleted. Thank you for using Finlytics.');
-          // In a real app, you'd redirect to login page
           window.location.href = '/';
         }
       }
@@ -387,61 +497,227 @@ const SettingsPage = () => {
         </div>
 
         <div className="settings-content">
-          {/* Profile Settings */}
+          {/* Profile Settings - Consolidated Profile View */}
           {activeTab === 'profile' && (
-            <div className="settings-section">
-              <h2>Profile Information</h2>
-              <div className="settings-grid">
-                <div className="settings-field">
-                  <label>Display Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={profileForm.name}
-                    onChange={handleProfileChange}
-                    placeholder="Your name"
-                  />
-                </div>
-                <div className="settings-field">
-                  <label>Email Address</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={profileForm.email}
-                    onChange={handleProfileChange}
-                    placeholder="your@email.com"
-                  />
-                </div>
-                <div className="settings-field">
-                  <label>Currency</label>
-                  <select name="currency" value={profileForm.currency} onChange={handleProfileChange}>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="JPY">JPY (¥)</option>
-                    <option value="KES">KES (Ksh)</option>
-                  </select>
-                </div>
-                <div className="settings-field">
-                  <label>Date Format</label>
-                  <select name="dateFormat" value={profileForm.dateFormat} onChange={handleProfileChange}>
-                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                  </select>
-                </div>
-                <div className="settings-field">
-                  <label>Language</label>
-                  <select name="language" value={profileForm.language} onChange={handleProfileChange}>
-                    <option value="English">English</option>
-                    <option value="Spanish">Español</option>
-                    <option value="French">Français</option>
-                    <option value="German">Deutsch</option>
-                    <option value="Swahili">Kiswahili</option>
-                  </select>
-                </div>
+            <motion.div 
+              className="profile-settings"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <div className="profile-header-settings">
+                <h2>Profile Information</h2>
+                {!isEditing ? (
+                  <button 
+                    className="edit-profile-btn"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <FiEdit2 /> Edit Profile
+                  </button>
+                ) : (
+                  <div className="profile-edit-actions">
+                    <button 
+                      className="cancel-btn"
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      className={`save-profile-btn ${isLoading ? 'loading' : ''}`}
+                      onClick={handleSaveProfile}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Saving...' : <><FiSave /> Save Changes</>}
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
+
+              <div className="profile-grid">
+                {/* Left Column - Avatar & Stats */}
+                <motion.div className="profile-left-col" variants={itemVariants}>
+                  <div className="profile-avatar-card">
+                    <div className="avatar-container">
+                      {profileData.avatar ? (
+                        <img src={profileData.avatar} alt="Profile" className="profile-avatar" />
+                      ) : (
+                        <div className="profile-avatar-placeholder">
+                          {getInitials()}
+                        </div>
+                      )}
+                      {isEditing && (
+                        <label htmlFor="avatar-upload" className="avatar-upload-label">
+                          <FiCamera className="upload-icon" />
+                          <input
+                            type="file"
+                            id="avatar-upload"
+                            accept="image/*"
+                            onChange={handleAvatarChange}
+                            className="avatar-upload-input"
+                          />
+                        </label>
+                      )}
+                    </div>
+                    <h3 className="profile-name-settings">{profileData.name}</h3>
+                    <p className="profile-member-since">Member since {profileData.joinDate}</p>
+                  </div>
+
+                  <div className="profile-stats-card">
+                    <div className="stat-item-settings">
+                      <span className="stat-label-settings">Accounts</span>
+                      <span className="stat-value-settings">3</span>
+                    </div>
+                    <div className="stat-item-settings">
+                      <span className="stat-label-settings">Transactions</span>
+                      <span className="stat-value-settings">156</span>
+                    </div>
+                    <div className="stat-item-settings">
+                      <span className="stat-label-settings">Goals</span>
+                      <span className="stat-value-settings">4</span>
+                    </div>
+                  </div>
+
+                  <div className="profile-info-card-settings">
+                    <h4>Account Details</h4>
+                    <div className="info-item-settings">
+                      <FiCalendar className="info-icon-settings" />
+                      <div className="info-content-settings">
+                        <span className="info-label-settings">Member Since</span>
+                        <span className="info-value-settings">{profileData.joinDate}</span>
+                      </div>
+                    </div>
+                    <div className="info-item-settings">
+                      <FiUser className="info-icon-settings" />
+                      <div className="info-content-settings">
+                        <span className="info-label-settings">User ID</span>
+                        <span className="info-value-settings">FIN-{user?.id || '12345'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Right Column - Edit Form */}
+                <motion.div className="profile-right-col" variants={itemVariants}>
+                  <div className="profile-form-card">
+                    <div className="form-grid-settings">
+                      {/* Full Name */}
+                      <div className="form-group-settings">
+                        <label>
+                          <FiUser className="field-icon" />
+                          Full Name
+                        </label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            name="name"
+                            value={profileData.name}
+                            onChange={handleInputChange}
+                            placeholder="Enter your full name"
+                            className="form-input-settings"
+                          />
+                        ) : (
+                          <div className="info-display-settings">{profileData.name}</div>
+                        )}
+                      </div>
+
+                      {/* Email */}
+                      <div className="form-group-settings">
+                        <label>
+                          <FiMail className="field-icon" />
+                          Email Address
+                        </label>
+                        {isEditing ? (
+                          <input
+                            type="email"
+                            name="email"
+                            value={profileData.email}
+                            onChange={handleInputChange}
+                            placeholder="Enter your email"
+                            className="form-input-settings"
+                          />
+                        ) : (
+                          <div className="info-display-settings">{profileData.email}</div>
+                        )}
+                      </div>
+
+                      {/* Phone */}
+                      <div className="form-group-settings">
+                        <label>
+                          <FiPhone className="field-icon" />
+                          Phone Number
+                        </label>
+                        {isEditing ? (
+                          <input
+                            type="tel"
+                            name="phone"
+                            value={profileData.phone}
+                            onChange={handleInputChange}
+                            placeholder="Enter your phone number"
+                            className="form-input-settings"
+                          />
+                        ) : (
+                          <div className="info-display-settings">{profileData.phone}</div>
+                        )}
+                      </div>
+
+                      {/* Location */}
+                      <div className="form-group-settings">
+                        <label>
+                          <FiMapPin className="field-icon" />
+                          Location
+                        </label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            name="location"
+                            value={profileData.location}
+                            onChange={handleInputChange}
+                            placeholder="Enter your location"
+                            className="form-input-settings"
+                          />
+                        ) : (
+                          <div className="info-display-settings">{profileData.location}</div>
+                        )}
+                      </div>
+
+                      {/* Bio */}
+                      <div className="form-group-settings full-width">
+                        <label>Bio</label>
+                        {isEditing ? (
+                          <textarea
+                            name="bio"
+                            value={profileData.bio}
+                            onChange={handleInputChange}
+                            placeholder="Tell us a little about yourself"
+                            rows="4"
+                            className="form-textarea-settings"
+                          />
+                        ) : (
+                          <div className="info-display-settings bio-display-settings">{profileData.bio}</div>
+                        )}
+                      </div>
+
+                      {/* Financial Stats */}
+                      <div className="stats-grid-settings full-width">
+                        <div className="stat-card-settings">
+                          <span className="stat-card-label">Total Saved</span>
+                          <span className="stat-card-value">$12,450</span>
+                        </div>
+                        <div className="stat-card-settings">
+                          <span className="stat-card-label">Monthly Average</span>
+                          <span className="stat-card-value">$2,075</span>
+                        </div>
+                        <div className="stat-card-settings">
+                          <span className="stat-card-label">Goals Achieved</span>
+                          <span className="stat-card-value">2/4</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
           )}
 
           {/* Notifications Settings */}
@@ -528,39 +804,65 @@ const SettingsPage = () => {
             <div className="settings-section">
               <h2>Security Settings</h2>
               
-              {/* Password Change Section */}
               <div className="security-password-section">
                 <h3>Change Password</h3>
                 <div className="settings-grid">
                   <div className="settings-field">
                     <label>Current Password</label>
-                    <input
-                      type="password"
-                      name="current"
-                      value={passwordData.current}
-                      onChange={handlePasswordChange}
-                      placeholder="Enter current password"
-                    />
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        name="current"
+                        value={passwordData.current}
+                        onChange={handlePasswordChange}
+                        placeholder="Enter current password"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      >
+                        {showCurrentPassword ? <FiEyeOff /> : <FiEye />}
+                      </button>
+                    </div>
                   </div>
                   <div className="settings-field">
                     <label>New Password</label>
-                    <input
-                      type="password"
-                      name="new"
-                      value={passwordData.new}
-                      onChange={handlePasswordChange}
-                      placeholder="Enter new password"
-                    />
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        name="new"
+                        value={passwordData.new}
+                        onChange={handlePasswordChange}
+                        placeholder="Enter new password"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? <FiEyeOff /> : <FiEye />}
+                      </button>
+                    </div>
                   </div>
                   <div className="settings-field">
                     <label>Confirm Password</label>
-                    <input
-                      type="password"
-                      name="confirm"
-                      value={passwordData.confirm}
-                      onChange={handlePasswordChange}
-                      placeholder="Confirm new password"
-                    />
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        name="confirm"
+                        value={passwordData.confirm}
+                        onChange={handlePasswordChange}
+                        placeholder="Confirm new password"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                      </button>
+                    </div>
                   </div>
                   {passwordError && <div className="error-message">{passwordError}</div>}
                   {passwordSuccess && <div className="success-message">{passwordSuccess}</div>}
@@ -572,7 +874,6 @@ const SettingsPage = () => {
                 </div>
               </div>
 
-              {/* Security Options */}
               <div className="settings-list" style={{ marginTop: '32px' }}>
                 <div className="settings-row">
                   <div className="row-info">
@@ -629,7 +930,6 @@ const SettingsPage = () => {
             <div className="settings-section">
               <h2>Appearance</h2>
               
-              {/* Dark Mode Toggle */}
               <div className="settings-row" style={{ marginBottom: '24px', background: 'transparent', padding: 0 }}>
                 <div className="row-info">
                   <span className="row-title">Dark Mode</span>
@@ -645,7 +945,6 @@ const SettingsPage = () => {
                 </label>
               </div>
 
-              {/* Theme Preview */}
               <div className="theme-preview-card">
                 <div className="theme-preview-content">
                   <div className="theme-color-preview" style={{ backgroundColor: accentColor }}></div>
@@ -656,7 +955,6 @@ const SettingsPage = () => {
                 </div>
               </div>
 
-              {/* Accent Color Selection */}
               <div className="settings-field" style={{ marginBottom: '24px' }}>
                 <label>Accent Color</label>
                 <div className="color-options">
@@ -672,7 +970,6 @@ const SettingsPage = () => {
                 </div>
               </div>
 
-              {/* Other Appearance Options */}
               <div className="settings-list">
                 <div className="settings-row">
                   <div className="row-info">

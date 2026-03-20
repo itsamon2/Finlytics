@@ -10,6 +10,7 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
+  transition: margin-left 0.3s ease;
 }
 
 .content-area {
@@ -21,10 +22,17 @@
 /* Responsive */
 @media (max-width: 768px) {
   .main-content {
-    margin-left: 0;
+    margin-left: 0 !important;
+    width: 100%;
   }
   
   .content-area {
-    padding: 16px;
+    padding: 70px 16px 16px 16px; 
+  }
+}
+
+@media (max-width: 480px) {
+  .content-area {
+    padding: 65px 12px 12px 12px;
   }
 }
