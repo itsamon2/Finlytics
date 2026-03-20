@@ -2,8 +2,10 @@ package com.Group2.Finlytic.Controller;
 
 import com.Group2.Finlytic.Model.GoalStatus;
 import com.Group2.Finlytic.Model.Goals;
+import com.Group2.Finlytic.Service.AdvisoryService;
 import com.Group2.Finlytic.Service.GoalsService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -15,6 +17,9 @@ public class GoalsController {
 
     @Autowired
     private GoalsService goalsService;
+
+    @Autowired
+    private AdvisoryService advisoryService;
 
     // Create a new goal
     @PostMapping
@@ -50,5 +55,20 @@ public class GoalsController {
     @GetMapping("/search")
     public List<Goals> searchGoals(@RequestParam String goal_name){
         return goalsService.getGoalsByName(goal_name);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteGoal(@PathVariable Long id) {
+        goalsService.deleteGoal(id);
+    }
+
+    @GetMapping("/{id}/advisory")
+    public ResponseEntity<String> getAdvisory(@PathVariable("id") Long id) {
+        try {
+            String advice = advisoryService.advise(id);
+            return ResponseEntity.ok(advice);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

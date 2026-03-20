@@ -55,61 +55,94 @@ public class FeasibilityService {
                 ? remainingAmount.divide(BigDecimal.valueOf(remainingMonths), 2, RoundingMode.HALF_UP)
                 : remainingAmount;
 
-        // --- Preliminary status ---
+        // --- Feasibility verdict ---
         String feasibilityStatus;
+        String feasibilityEmoji;
         if (remainingMonths <= 0) {
             feasibilityStatus = "DEADLINE REACHED";
+            feasibilityEmoji  = "🔴";
         } else if (monthlySurplus.compareTo(requiredMonthlySaving) >= 0) {
             feasibilityStatus = "FEASIBLE";
+            feasibilityEmoji  = "✅";
         } else if (monthlySurplus.compareTo(requiredMonthlySaving.multiply(BigDecimal.valueOf(0.7))) >= 0) {
             feasibilityStatus = "RISKY";
+            feasibilityEmoji  = "⚠️";
         } else {
             feasibilityStatus = "NOT FEASIBLE";
+            feasibilityEmoji  = "🔴";
         }
+
+        // --- Gap or buffer ---
+        BigDecimal monthlyBuffer = monthlySurplus.subtract(requiredMonthlySaving);
+        boolean hasSurplus = monthlyBuffer.compareTo(BigDecimal.ZERO) >= 0;
 
         // --- Expenses breakdown ---
         String expensesBreakdown = expenses.entrySet()
                 .stream()
-                .map(e -> "  - " + e.getKey() + ": " + e.getValue())
+                .map(e -> "  - " + e.getKey() + ": Ksh " + e.getValue())
                 .reduce("", (a, b) -> a + "\n" + b);
 
         // --- Build prompt ---
         String prompt = String.format("""
-                You are a personal financial advisor. Analyze the following goal and financial data,
-                then provide detailed, practical, and encouraging financial advice.
+                You are a friendly personal financial advisor speaking directly to the person reading this.
+                Always use "you" and "your" — never refer to "the user".
+                Your job is to provide a FEASIBILITY ASSESSMENT — a clear, honest diagnosis of whether
+                this goal is achievable based on current finances. Do NOT give an action plan (that is
+                handled separately). Focus only on the numbers, the verdict, and the key obstacles or strengths.
 
                 === GOAL DETAILS ===
                 - Goal Name        : %s
                 - Goal Type        : %s
                 - Priority         : %s
                 - Status           : %s
-                - Target Amount    : %s
-                - Saved So Far     : %s
-                - Remaining        : %s
+                - Target Amount    : Ksh %s
+                - Saved So Far     : Ksh %s
+                - Remaining        : Ksh %s
                 - Target Date      : %s
                 - Months Left      : %d
-                - Contribution Amt : %s
+                - Contribution Amt : Ksh %s
                 - Next Contribution: %s
 
-                === FINANCIAL SNAPSHOT (from transaction history) ===
-                - Monthly Income   : %s
-                - Total Expenses   : %s
+                === FINANCIAL SNAPSHOT ===
+                - Monthly Income   : Ksh %s
+                - Total Expenses   : Ksh %s
                   (Breakdown:
                 %s)
-                - Monthly Surplus  : %s
-                - Required Monthly Saving: %s
+                - Monthly Surplus  : Ksh %s
+                - Required Monthly Saving: Ksh %s
+                - Monthly Buffer / Gap   : %s Ksh %s
 
-                === PRELIMINARY ASSESSMENT ===
-                - Status: %s
+                === SYSTEM VERDICT ===
+                %s %s
 
-                Based on all the above, provide a detailed financial advice paragraph that includes:
-                1. A clear verdict on whether this goal is achievable
-                2. Specific advice on adjusting contributions or cutting specific expenses
-                3. What risks could derail this goal and how to mitigate them
-                4. An encouraging closing remark tailored to this specific goal and category
+                Generate a structured feasibility report with these EXACT sections:
 
-                Keep the tone professional but friendly. Be specific with numbers where relevant.
-                All the numbers involded are Ksh. Display the amount as "Ksh 1200.00 not 1200 ksh"
+                ## %s Verdict
+                (1 sentence: state clearly whether the goal is feasible, risky, or not feasible and why in one line)
+
+                ## 📈 Financial Position
+                (3-4 sentences: break down the numbers — income, expenses, surplus, what the required saving is,
+                and whether the current surplus covers it. Be precise with Ksh amounts.)
+
+                ## 🔍 Key Factors
+                (2-3 bullet points: the specific financial factors that most impact this goal's feasibility —
+                could be positive strengths or negative obstacles. Use actual Ksh figures.)
+
+                ## 🚧 What Could Go Wrong
+                (2 specific risks based on the expense breakdown and goal type that could make this goal
+                infeasible. Keep it diagnostic — no solutions here.)
+
+                ## 📋 Summary
+                (2 sentences: overall feasibility conclusion and the single most important number you
+                need to keep in mind — e.g. the required monthly saving or the monthly gap.)
+
+                Rules:
+                - Always use "Ksh X,XXX.XX" format for all amounts
+                - Always speak directly to the person — use "you" and "your", never "the user"
+                - Be factual and diagnostic — no action steps
+                - Do NOT suggest what to do — that is the advisory report's job
+                - Tone: clear, honest, warm and professional
+                - All amounts are in Kenyan Shillings (Ksh)
                 """,
                 goals.getGoalName(),
                 goals.getGoalType(),
@@ -127,7 +160,11 @@ public class FeasibilityService {
                 expensesBreakdown,
                 monthlySurplus,
                 requiredMonthlySaving,
-                feasibilityStatus
+                hasSurplus ? "Buffer:" : "Gap:",
+                monthlyBuffer.abs(),
+                feasibilityEmoji,
+                feasibilityStatus,
+                feasibilityEmoji
         );
 
         return chatClient.prompt()
