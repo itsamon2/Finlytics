@@ -48,4 +48,8 @@ public class GoalsService {
     public List<Goals> getGoalsByName(String goal_name) {
         return goalsRepo.findByGoalNameContainingIgnoreCase(goal_name);
     }
+    // Delete a goal
+    public void deleteGoal(Long goalId) {
+        goalsRepo.deleteById(goalId);
+    }
 }

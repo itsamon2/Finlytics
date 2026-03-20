@@ -21,32 +21,30 @@ const Sidebar = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const menuSections = [
-    {
-      title: 'MAIN',
-      items: [
-        { name: 'Dashboard', path: '/dashboard', icon: '📊' },
-        { name: 'Transactions', path: '/transactions', icon: '💰' },
-        { name: 'Budgets', path: '/budgets', icon: '📋' },
-        { name: 'Goals', path: '/goals', icon: '🎯' }
-      ]
-    },
-    {
-      title: 'ANALYSIS',
-      items: [
-        { name: 'Feasibility', path: '/feasibility', icon: '📈' },
-        { name: 'Advisory', path: '/advisory', icon: '💡' },
-        { name: 'Scenarios', path: '/scenarios', icon: '🔄' }
-      ]
-    },
-    {
-      title: 'TOOLS',
-      items: [
-        { name: 'Tax & Health', path: '/tax-health', icon: '🏥' },
-        { name: 'Reports', path: '/reports', icon: '📑' }
-      ]
-    }
-  ];
+const menuSections = [
+  {
+    title: 'MAIN',
+    items: [
+      { name: 'Dashboard',     path: '/dashboard',     icon: '📊' },
+      { name: 'Transactions',  path: '/transactions',  icon: '💰' },
+      { name: 'Budgets',       path: '/budgets',       icon: '📋' },
+      { name: 'Goals',         path: '/goals',         icon: '🎯' },
+    ]
+  },
+  {
+    title: 'ANALYSIS',
+    items: [
+      { name: 'Scenarios',  path: '/scenarios',  icon: '🔄' }
+    ]
+  },
+  {
+    title: 'TOOLS',
+    items: [
+      { name: 'Tax & Health', path: '/tax-health', icon: '🏥' },
+      { name: 'Reports',      path: '/reports',    icon: '📑' }
+    ]
+  }
+];
 
   const isActive = (path) => {
     return location.pathname === path;
