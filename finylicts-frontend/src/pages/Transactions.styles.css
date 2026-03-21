@@ -5,7 +5,6 @@
 .transactions-page {
   padding: 24px 32px;
   width: 100%;
-  max-width: 1100px;
   background: var(--bg-primary, #F5F7FA);
   min-height: 100%;
   box-sizing: border-box;
@@ -218,13 +217,19 @@
   background: var(--bg-secondary, white);
   border-radius: 12px;
   border: 1px solid var(--border-color, #E2E8F0);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+/* Inner wrapper forces minimum width so columns don't squish */
+.transactions-list-inner {
+  min-width: 640px;
 }
 
 /* ── Desktop table header — hidden on mobile ── */
 .transactions-header {
   display: grid;
-  grid-template-columns: 90px minmax(140px, auto) minmax(100px, auto) minmax(120px, auto) 32px;
+  grid-template-columns: 90px 180px 120px 150px 32px;
   padding: 12px 20px;
   background: var(--bg-tertiary, #F8FAFC);
   border-bottom: 1px solid var(--border-color, #E2E8F0);
@@ -254,7 +259,7 @@
 /* ── Desktop transaction row ── */
 .transaction-row {
   display: grid;
-  grid-template-columns: 90px minmax(140px, auto) minmax(100px, auto) minmax(120px, auto) 32px;
+  grid-template-columns: 90px 180px 120px 150px 32px;
   padding: 14px 20px;
   align-items: center;
   border-bottom: 1px solid var(--border-color, #F1F5F9);
