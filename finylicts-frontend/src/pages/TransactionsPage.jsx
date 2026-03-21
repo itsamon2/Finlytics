@@ -194,11 +194,6 @@ const TransactionsPage = () => {
                     className={`transaction-row ${expandedRow === t.transactionId ? 'expanded' : ''}`}
                     onClick={() => toggleRow(t.transactionId)}
                   >
-                    {/* Mobile card layout inside the row */}
-                    <span className="transaction-date hide-desktop">
-                      {new Date(t.creationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-
                     {/* Mobile: card layout */}
                     <div className="mobile-row">
                       <span className="mobile-date">
@@ -218,8 +213,8 @@ const TransactionsPage = () => {
                       </div>
                     </div>
 
-                    {/* Desktop: original grid columns */}
-                    <span className="desktop-date transaction-date">
+                    {/* Desktop: grid columns — hidden on mobile */}
+                    <span className="transaction-date desktop-only">
                       {new Date(t.creationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                     <span className="transaction-category desktop-only">
