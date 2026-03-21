@@ -1,4 +1,4 @@
-import React from 'react';
+import "./Sidebar.css";
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = () => {

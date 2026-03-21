@@ -6,17 +6,19 @@
   background: #F5F7FA;
 }
 
+
 .main-content {
-  flex: 1;
+  margin-left: 250px; /* SAME as sidebar width */
   display: flex;
   flex-direction: column;
   min-width: 0;
-  width: 100%;
-  max-width: 100%;
-  background: #F5F7FA;
 }
 
 .top-header {
+  position: fixed;
+  top: 0;
+  left: 250px;   /* 🔥 THIS prevents overlap with sidebar */
+  right: 0;
   height: 70px;
   background: #FFFFFF;
   border-bottom: 1px solid #E2E8F0;
@@ -24,8 +26,9 @@
   justify-content: flex-end;
   align-items: center;
   padding: 0 32px;
-  width: 100%;
+  z-index: 1000;
 }
+
 
 .user-avatar {
   width: 40px;
@@ -45,4 +48,6 @@
   width: 100%;
   max-width: 100%;
   background: #F5F7FA;
+  margin-top: 70px;
+  padding: 20px;
 }

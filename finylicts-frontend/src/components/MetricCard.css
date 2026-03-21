@@ -1,0 +1,50 @@
+.metric-card {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.icon {
+  background: #e2e8f0;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 20px;
+}
+
+.metric-header h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.metric-header h2 {
+  margin: 5px 0 0;
+}
+
+.progress-bar {
+  margin-top: 15px;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(to right, #3b82f6, #22c55e);
+  border-radius: 10px;
+}
+
+.target {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #777;
+}

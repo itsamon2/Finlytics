@@ -1,0 +1,11 @@
+.sidebar {
+  position: fixed;      /* 🔥 makes entire sidebar stay */
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;     /* 🔥 allows internal scroll if needed */
+}

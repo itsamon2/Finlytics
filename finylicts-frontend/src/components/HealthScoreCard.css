@@ -1,0 +1,17 @@
+.health-score-card {
+
+    background-color: #327ee1; /* blue background */
+    display: flex;
+    flex-direction: column; /* stack h2, score, p vertically */
+    align-items: center;    /* centers children horizontally */
+    border-radius: 5px;
+    color: white;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+.score {
+    font-size: 50px;
+    font-weight: bold;
+    color: white;
+}
+

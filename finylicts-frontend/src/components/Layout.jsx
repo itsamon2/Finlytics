@@ -1,9 +1,7 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import './Layout.css';
 
-const Layout = () => {
+const Layout = ({children}) => {
   return (
     <div className="app-layout">
       <Sidebar />
@@ -12,7 +10,7 @@ const Layout = () => {
           <div className="user-avatar">MM</div>
         </header>
         <div className="content-area">
-          <Outlet /> 
+          {children } 
         </div>
       </main>
     </div>
