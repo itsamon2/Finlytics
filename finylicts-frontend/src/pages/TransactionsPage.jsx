@@ -166,6 +166,7 @@ const TransactionsPage = () => {
 
       {/* Transactions List */}
       <div className="transactions-list-container">
+        <div className="transactions-list-inner">
 
         {/* Desktop header — hidden on mobile via CSS */}
         <div className="transactions-header">
@@ -252,6 +253,7 @@ const TransactionsPage = () => {
         ) : (
           <div className="no-transactions"><p>No transactions found</p></div>
         )}
+        </div>
       </div>
     </div>
   );
