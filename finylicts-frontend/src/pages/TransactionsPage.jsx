@@ -9,13 +9,12 @@ const TransactionsPage = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [expandedRow, setExpandedRow] = useState(null); 
+  const [expandedRow, setExpandedRow] = useState(null);
 
-useEffect(() => {
+  useEffect(() => {
     const fetchTransactions = () => {
       transactionService.getAll()
         .then(data => {
-          // Sort newest first by transactionId
           const sorted = data.sort((a, b) => b.transactionId - a.transactionId);
           setTransactions(sorted);
           setLoading(false);
@@ -31,91 +30,59 @@ useEffect(() => {
     return () => clearInterval(interval);
   }, []);
 
-  // Toggle expanded row
-  const toggleRow = (id) => {
-    setExpandedRow(expandedRow === id ? null : id);
-  };
+  const toggleRow = (id) => setExpandedRow(expandedRow === id ? null : id);
 
-  // Filter transactions
-  const filteredTransactions = transactions.filter(transaction => {
-    if (filter === 'income' && transaction.type !== 'INCOME') return false;
-    if (filter === 'expenses' && transaction.type !== 'EXPENSE') return false;
+  const filteredTransactions = transactions.filter(t => {
+    if (filter === 'income'   && t.type !== 'INCOME')  return false;
+    if (filter === 'expenses' && t.type !== 'EXPENSE') return false;
     if (searchTerm &&
-        !transaction.rawMessage?.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        !transaction.category?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+        !t.rawMessage?.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !t.category?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
 
-  // Summary stats
   const summary = {
-    totalIncome: transactions
-      .filter(t => t.type === 'INCOME')
-      .reduce((sum, t) => sum + t.amount, 0),
-    totalExpenses: transactions
-      .filter(t => t.type === 'EXPENSE')
-      .reduce((sum, t) => sum + t.amount, 0),
+    totalIncome:       transactions.filter(t => t.type === 'INCOME') .reduce((s, t) => s + t.amount, 0),
+    totalExpenses:     transactions.filter(t => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0),
     totalTransactions: transactions.length,
   };
 
-  // Handle export
   const handleExport = () => {
-    const dataToExport = filteredTransactions.length > 0 ? filteredTransactions : transactions;
-    if (dataToExport.length === 0) {
-      alert('No transactions to export');
-      return;
-    }
-    const csvContent = [
+    const data = filteredTransactions.length > 0 ? filteredTransactions : transactions;
+    if (!data.length) { alert('No transactions to export'); return; }
+    const csv = [
       ['Date', 'Category', 'Type', 'Amount', 'Message'],
-      ...dataToExport.map(t => [
-        t.creationDate,
-        t.category,
-        t.type,
-        t.amount,
-        `"${t.rawMessage}"`
-      ])
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    alert(`Successfully exported ${dataToExport.length} transactions`);
+      ...data.map(t => [t.creationDate, t.category, t.type, t.amount, `"${t.rawMessage}"`])
+    ].map(r => r.join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    Object.assign(document.createElement('a'), {
+      href: url, download: `transactions-${new Date().toISOString().split('T')[0]}.csv`
+    }).click();
+    URL.revokeObjectURL(url);
+    alert(`Successfully exported ${data.length} transactions`);
   };
 
-// Group transactions by date
-const groupedTransactions = filteredTransactions.reduce((groups, transaction) => {
-    const date = transaction.creationDate;
+  const groupedTransactions = filteredTransactions.reduce((groups, t) => {
+    const date = t.creationDate;
     if (!groups[date]) groups[date] = [];
-    groups[date].push(transaction);
+    groups[date].push(t);
     return groups;
-}, {});
+  }, {});
 
-// Sort dates newest first
-const sortedDates = Object.keys(groupedTransactions).sort((a, b) => new Date(b) - new Date(a));
-
-// Sort transactions within each date newest first by transactionId
-sortedDates.forEach(date => {
+  const sortedDates = Object.keys(groupedTransactions).sort((a, b) => new Date(b) - new Date(a));
+  sortedDates.forEach(date => {
     groupedTransactions[date].sort((a, b) => b.transactionId - a.transactionId);
-});
+  });
 
-  // Category emoji mapper
   const categoryEmoji = {
-    FOOD: '🍔',
-    TRANSPORT: '🚗',
-    UTILITIES: '💡',
-    ENTERTAINMENT: '🎬',
-    SHOPPING: '🛍️',
-    HEALTH: '🏥',
-    INCOME: '💰',
-    LOAN: '🏦',
-    OTHER: '📦'
+    FOOD: '🍔', TRANSPORT: '🚗', UTILITIES: '💡', ENTERTAINMENT: '🎬',
+    SHOPPING: '🛍️', HEALTH: '🏥', INCOME: '💰', LOAN: '🏦', OTHER: '📦',
   };
+
+  const isMobile = window.innerWidth <= 768;
 
   if (loading) return <div className="loading">Loading transactions...</div>;
-  if (error) return <div className="error">Error: {error}</div>;
+  if (error)   return <div className="error">Error: {error}</div>;
 
   return (
     <div className="transactions-page">
@@ -134,40 +101,38 @@ sortedDates.forEach(date => {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="transactions-summary">
-        <div className="summary-card">
-          <div className="summary-icon income">💰</div>
-          <div className="summary-details">
-            <span className="summary-label">Total Income</span>
-            <span className="summary-value positive">
-              +Ksh {summary.totalIncome.toLocaleString()}
-            </span>
+      {/* Sticky Summary Cards */}
+      <div className="transactions-summary-wrapper">
+        <div className="transactions-summary">
+          <div className="summary-card">
+            <div className="summary-icon income">💰</div>
+            <div className="summary-details">
+              <span className="summary-label">Total Income</span>
+              <span className="summary-value positive">+Ksh {summary.totalIncome.toLocaleString()}</span>
+            </div>
           </div>
-        </div>
-        <div className="summary-card">
-          <div className="summary-icon expenses">📉</div>
-          <div className="summary-details">
-            <span className="summary-label">Total Expenses</span>
-            <span className="summary-value negative">
-              -Ksh {summary.totalExpenses.toLocaleString()}
-            </span>
+          <div className="summary-card">
+            <div className="summary-icon expenses">📉</div>
+            <div className="summary-details">
+              <span className="summary-label">Total Expenses</span>
+              <span className="summary-value negative">-Ksh {summary.totalExpenses.toLocaleString()}</span>
+            </div>
           </div>
-        </div>
-        <div className="summary-card">
-          <div className="summary-icon pending">🔢</div>
-          <div className="summary-details">
-            <span className="summary-label">Total Transactions</span>
-            <span className="summary-value">{summary.totalTransactions}</span>
+          <div className="summary-card">
+            <div className="summary-icon pending">🔢</div>
+            <div className="summary-details">
+              <span className="summary-label">Transactions</span>
+              <span className="summary-value">{summary.totalTransactions}</span>
+            </div>
           </div>
-        </div>
-        <div className="summary-card">
-          <div className="summary-icon daily">📅</div>
-          <div className="summary-details">
-            <span className="summary-label">Net Balance</span>
-            <span className={`summary-value ${summary.totalIncome - summary.totalExpenses >= 0 ? 'positive' : 'negative'}`}>
-              Ksh {(summary.totalIncome - summary.totalExpenses).toLocaleString()}
-            </span>
+          <div className="summary-card">
+            <div className="summary-icon daily">📅</div>
+            <div className="summary-details">
+              <span className="summary-label">Net Balance</span>
+              <span className={`summary-value ${summary.totalIncome - summary.totalExpenses >= 0 ? 'positive' : 'negative'}`}>
+                Ksh {(summary.totalIncome - summary.totalExpenses).toLocaleString()}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -180,17 +145,17 @@ sortedDates.forEach(date => {
             type="text"
             placeholder="Search by category or message..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
             className="search-input"
           />
         </div>
         <div className="filter-controls">
           <div className="filter-tabs">
-            <button className={`filter-tab ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All</button>
-            <button className={`filter-tab ${filter === 'income' ? 'active' : ''}`} onClick={() => setFilter('income')}>Income</button>
+            <button className={`filter-tab ${filter === 'all'      ? 'active' : ''}`} onClick={() => setFilter('all')}>All</button>
+            <button className={`filter-tab ${filter === 'income'   ? 'active' : ''}`} onClick={() => setFilter('income')}>Income</button>
             <button className={`filter-tab ${filter === 'expenses' ? 'active' : ''}`} onClick={() => setFilter('expenses')}>Expenses</button>
           </div>
-          <select className="date-range" value={dateRange} onChange={(e) => setDateRange(e.target.value)}>
+          <select className="date-range" value={dateRange} onChange={e => setDateRange(e.target.value)}>
             <option value="this-month">This Month</option>
             <option value="last-month">Last Month</option>
             <option value="last-3-months">Last 3 Months</option>
@@ -201,6 +166,8 @@ sortedDates.forEach(date => {
 
       {/* Transactions List */}
       <div className="transactions-list-container">
+
+        {/* Desktop header — hidden on mobile via CSS */}
         <div className="transactions-header">
           <span>Date</span>
           <span>Category</span>
@@ -214,49 +181,67 @@ sortedDates.forEach(date => {
             <div key={date} className="date-group">
               <div className="date-header">
                 {new Date(date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
+                  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                 })}
               </div>
-              {groupedTransactions[date].map(transaction => (
-                <div key={transaction.transactionId}>
 
-                  {/* Main Row */}
+              {groupedTransactions[date].map(t => (
+                <div key={t.transactionId}>
+
+                  {/* ── Desktop row ── */}
                   <div
-                    className={`transaction-row ${expandedRow === transaction.transactionId ? 'expanded' : ''}`}
-                    onClick={() => toggleRow(transaction.transactionId)}
+                    className={`transaction-row ${expandedRow === t.transactionId ? 'expanded' : ''}`}
+                    onClick={() => toggleRow(t.transactionId)}
                   >
-                    <span className="transaction-date">
-                      {new Date(transaction.creationDate).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric'
-                      })}
+                    {/* Mobile card layout inside the row */}
+                    <span className="transaction-date hide-desktop">
+                      {new Date(t.creationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
-                    <span className="transaction-category">
-                      <span className={`category-badge category-${transaction.category?.toLowerCase()}`}>
-                        {categoryEmoji[transaction.category]} {transaction.category}
+
+                    {/* Mobile: card layout */}
+                    <div className="mobile-row">
+                      <span className="mobile-date">
+                        {new Date(t.creationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                      <div className="mobile-row-main">
+                        <span className={`category-badge category-${t.category?.toLowerCase()}`}>
+                          {categoryEmoji[t.category]} {t.category}
+                        </span>
+                        <span className={`status-badge status-${t.type?.toLowerCase()}`}>{t.type}</span>
+                        <span className={`transaction-amount ${t.type === 'INCOME' ? 'positive' : 'negative'}`}>
+                          {t.type === 'INCOME' ? '+' : '-'}Ksh {t.amount?.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="mobile-row-arrow">
+                        <span className="expand-icon">{expandedRow === t.transactionId ? '▲' : '▼'}</span>
+                      </div>
+                    </div>
+
+                    {/* Desktop: original grid columns */}
+                    <span className="desktop-date transaction-date">
+                      {new Date(t.creationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                    <span className="transaction-category desktop-only">
+                      <span className={`category-badge category-${t.category?.toLowerCase()}`}>
+                        {categoryEmoji[t.category]} {t.category}
                       </span>
                     </span>
-                    <span className="transaction-status">
-                      <span className={`status-badge status-${transaction.type?.toLowerCase()}`}>
-                        {transaction.type}
-                      </span>
+                    <span className="transaction-status desktop-only">
+                      <span className={`status-badge status-${t.type?.toLowerCase()}`}>{t.type}</span>
                     </span>
-                    <span className={`transaction-amount ${transaction.type === 'INCOME' ? 'positive' : 'negative'}`}>
-                      {transaction.type === 'INCOME' ? '+' : '-'}Ksh {transaction.amount?.toLocaleString()}
+                    <span className={`transaction-amount desktop-only ${t.type === 'INCOME' ? 'positive' : 'negative'}`}>
+                      {t.type === 'INCOME' ? '+' : '-'}Ksh {t.amount?.toLocaleString()}
                     </span>
-                    <span className="expand-icon">
-                      {expandedRow === transaction.transactionId ? '▲' : '▼'}
+                    <span className="expand-icon desktop-only">
+                      {expandedRow === t.transactionId ? '▲' : '▼'}
                     </span>
                   </div>
 
-                  {/* Expanded Message Row */}
-                  {expandedRow === transaction.transactionId && (
+                  {/* Expanded detail */}
+                  {expandedRow === t.transactionId && (
                     <div className="transaction-detail">
                       <span className="detail-label">📩 M-Pesa Message:</span>
-                      <span className="detail-message">{transaction.rawMessage}</span>
+                      <span className="detail-message">{t.rawMessage}</span>
                     </div>
                   )}
 
@@ -265,9 +250,7 @@ sortedDates.forEach(date => {
             </div>
           ))
         ) : (
-          <div className="no-transactions">
-            <p>No transactions found</p>
-          </div>
+          <div className="no-transactions"><p>No transactions found</p></div>
         )}
       </div>
     </div>
