@@ -60,12 +60,12 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile toggle button */}
-      {isMobile && (
+      {/* Mobile hamburger — only shown when sidebar is closed */}
+      {isMobile && !isOpen && (
         <button
-          className={`menu-toggle ${isOpen ? 'open' : ''}`}
-          onClick={() => setIsOpen(!isOpen)}
-          aria-label="Toggle menu"
+          className="menu-toggle"
+          onClick={() => setIsOpen(true)}
+          aria-label="Open menu"
         >
           <span />
           <span />
@@ -77,7 +77,18 @@ const Sidebar = () => {
 
         {/* Logo */}
         <div className="sidebar-logo">
-          <h2>Finlytics</h2>
+          <div className="sidebar-logo-top">
+            <h2>Finlytics</h2>
+            {isMobile && (
+              <button
+                className="sidebar-close-btn"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close menu"
+              >
+                ×
+              </button>
+            )}
+          </div>
           <span>Welcome, {user?.name?.split(' ')[0] || 'User'}</span>
         </div>
 
