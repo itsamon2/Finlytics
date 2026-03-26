@@ -43,20 +43,20 @@ function App() {
               </ProtectedRoute>
             }>
               <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="transactions" element={<TransactionsPage />} />
-              <Route path="budgets" element={<BudgetsPage />} />
-              <Route path="goals" element={<GoalsPage />} />
-              <Route path="analysis" element={<AnalysisPage />} />
-              <Route path="tools" element={<ToolsPage />} />
-              <Route path="reports" element={<ReportsPage />} />
-              <Route path="feasibility" element={<FeasibilityPage />} />
-              <Route path="advisory" element={<AdvisoryPage />} />
-              <Route path="scenarios" element={<ScenariosPage />} />
-              <Route path="tax-health" element={<TaxHealthPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="notifications" element={<NotificationsPage />} />
+<Route path="dashboard" element={<Dashboard />} />
+<Route path="profile" element={<ProfilePage />} />
+<Route path="transactions" element={<TransactionsPage />} />
+<Route path="budgets" element={<BudgetsPage />} />
+<Route path="goals" element={<GoalsPage />} />
+<Route path="goals/:id/feasibility" element={<FeasibilityPage />} />
+<Route path="goals/:id/advisory" element={<AdvisoryPage />} />
+<Route path="analysis" element={<AnalysisPage />} />
+<Route path="tools" element={<ToolsPage />} />
+<Route path="reports" element={<ReportsPage />} />
+<Route path="scenarios" element={<ScenariosPage />} />
+<Route path="tax-health" element={<TaxHealthPage />} />
+<Route path="settings" element={<SettingsPage />} />
+<Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
