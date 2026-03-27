@@ -726,3 +726,100 @@
     max-height: 95vh;
   }
 }
+
+/* ── Check-in banners ── */
+.checkin-banners {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.checkin-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #FEF3C7;
+  border: 1px solid #F59E0B;
+  border-radius: 12px;
+  padding: 14px 18px;
+  gap: 12px;
+}
+
+.checkin-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.checkin-banner-left p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #6B7280;
+}
+
+.checkin-bell { font-size: 20px; }
+
+.checkin-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+
+/* ── Due indicator on card ── */
+.checkin-due { border: 2px solid #F59E0B; }
+
+.due-indicator {
+  background: #FEF3C7;
+  color: #92400E;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  display: inline-block;
+}
+
+/* ── Check-in modal specifics ── */
+.checkin-expected {
+  margin-top: 12px;
+  font-size: 15px;
+  color: #374151;
+}
+
+.checkin-hint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #6B7280;
+}
+
+.checkin-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkin-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.checkin-option-btn:hover {
+  background: #F3F4F6;
+  border-color: #D1D5DB;
+}
+
+.checkin-option-btn span { font-size: 24px; flex-shrink: 0; }
+.checkin-option-btn strong { display: block; font-size: 14px; color: #111827; }
+.checkin-option-btn p { margin: 4px 0 0; font-size: 12px; color: #6B7280; }

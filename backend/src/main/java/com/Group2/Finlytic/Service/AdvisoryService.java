@@ -169,7 +169,7 @@ public class AdvisoryService {
                 goal.getTargetDate(),
                 remainingMonths,
                 goal.getContributionAmount(),
-                goal.getNextContributionDate(),
+                goalsService.getNextContributionDate(goal),
                 savingProgress,
                 timeProgress,
                 performanceStatus,
