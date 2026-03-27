@@ -1,11 +1,13 @@
 package com.Group2.Finlytic.Controller;
 
+import com.Group2.Finlytic.Config.JwtUtil;
 import com.Group2.Finlytic.Model.User;
 import com.Group2.Finlytic.Service.UserService;
 import com.Group2.Finlytic.repo.UserRepo;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
 
 import java.util.Map;
 
@@ -16,11 +18,13 @@ public class AuthController {
     private final UserService userService;
     private final UserRepo userRepo;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public AuthController(UserService userService, UserRepo userRepo, PasswordEncoder passwordEncoder){
+    public AuthController(UserService userService, UserRepo userRepo, PasswordEncoder passwordEncoder, JwtUtil jwtUtil){
         this.userService = userService;
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtil         = jwtUtil;
     }
 
     @PostMapping("/register")
@@ -45,10 +49,14 @@ public class AuthController {
             return ResponseEntity.status(401).body("Invalid password");
         }
 
+        String token = jwtUtil.generateToken(email);
+
         return ResponseEntity.ok().body(Map.of(
-                "message", "Login successful",
+                "token", token,
                 "email", user.getEmail(),
-                "role", user.getRole()
+                "name", user.getFirstName() + " " + user.getLastName(),
+                "role", user.getRole(),
+                "photo", user.getProfilePhoto() != null ? user.getProfilePhoto() : ""
         ));
     }
 }

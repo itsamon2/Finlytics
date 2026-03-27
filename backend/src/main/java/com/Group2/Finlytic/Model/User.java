@@ -30,5 +30,11 @@ public class User {
     @Column(nullable = false)
     private String role;
 
+    @Column(nullable = true)
+    private String profilePhoto;
+
+    @Column(nullable = true)
+    private String provider; // "LOCAL" or "GOOGLE"
+
     private boolean enabled = true;
 }
