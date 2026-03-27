@@ -9,6 +9,7 @@ import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import OAuthCallback from './pages/OAuthCallback';
 import TransactionsPage from './pages/TransactionsPage';
 import BudgetsPage from './pages/BudgetsPage';
 import GoalsPage from './pages/GoalsPage';
@@ -20,10 +21,9 @@ import SettingsPage from './pages/SettingsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import './App.css';
 
-// Placeholder pages
 const AnalysisPage = () => <div className="content-area"><h1>Analysis Page</h1><p>Coming soon...</p></div>;
-const ToolsPage = () => <div className="content-area"><h1>Tools Page</h1><p>Coming soon...</p></div>;
-const ReportsPage = () => <div className="content-area"><h1>Reports Page</h1><p>Coming soon...</p></div>;
+const ToolsPage    = () => <div className="content-area"><h1>Tools Page</h1><p>Coming soon...</p></div>;
+const ReportsPage  = () => <div className="content-area"><h1>Reports Page</h1><p>Coming soon...</p></div>;
 
 function App() {
   return (
@@ -31,32 +31,31 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login"           element={<LoginPage />} />
+            <Route path="/register"        element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            
-            {/* Protected routes */}
+            <Route path="/auth/callback"   element={<OAuthCallback />} />
+
             <Route path="/" element={
               <ProtectedRoute>
                 <Layout />
               </ProtectedRoute>
             }>
               <Route index element={<Navigate to="/dashboard" replace />} />
-<Route path="dashboard" element={<Dashboard />} />
-<Route path="profile" element={<ProfilePage />} />
-<Route path="transactions" element={<TransactionsPage />} />
-<Route path="budgets" element={<BudgetsPage />} />
-<Route path="goals" element={<GoalsPage />} />
-<Route path="goals/:id/feasibility" element={<FeasibilityPage />} />
-<Route path="goals/:id/advisory" element={<AdvisoryPage />} />
-<Route path="analysis" element={<AnalysisPage />} />
-<Route path="tools" element={<ToolsPage />} />
-<Route path="reports" element={<ReportsPage />} />
-<Route path="scenarios" element={<ScenariosPage />} />
-<Route path="tax-health" element={<TaxHealthPage />} />
-<Route path="settings" element={<SettingsPage />} />
-<Route path="notifications" element={<NotificationsPage />} />
+              <Route path="dashboard"             element={<Dashboard />} />
+              <Route path="profile"               element={<ProfilePage />} />
+              <Route path="transactions"          element={<TransactionsPage />} />
+              <Route path="budgets"               element={<BudgetsPage />} />
+              <Route path="goals"                 element={<GoalsPage />} />
+              <Route path="goals/:id/feasibility" element={<FeasibilityPage />} />
+              <Route path="goals/:id/advisory"    element={<AdvisoryPage />} />
+              <Route path="analysis"              element={<AnalysisPage />} />
+              <Route path="tools"                 element={<ToolsPage />} />
+              <Route path="reports"               element={<ReportsPage />} />
+              <Route path="scenarios"             element={<ScenariosPage />} />
+              <Route path="tax-health"            element={<TaxHealthPage />} />
+              <Route path="settings"              element={<SettingsPage />} />
+              <Route path="notifications"         element={<NotificationsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
