@@ -154,7 +154,7 @@ public class FeasibilityService {
                 targetDate,
                 remainingMonths,
                 goals.getContributionAmount(),
-                goals.getNextContributionDate(),
+                goalsService.getNextContributionDate(goals),
                 monthlyIncome,
                 totalExpenses,
                 expensesBreakdown,

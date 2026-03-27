@@ -49,9 +49,24 @@ public class Goals {
     @Column(name = "contribution_amount")
     private BigDecimal contributionAmount;
 
-    @Column(name = "next_contribution_date")
-    private LocalDate nextContributionDate;
+    // ── Contribution frequency ──────────────────────────────────────────────
+    // e.g. value=5, unit=DAYS means "every 5 days"
+    @Column(name = "contribution_frequency_value")
+    private Integer contributionFrequencyValue;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "contribution_frequency_unit")
+    private ContributionFrequencyUnit contributionFrequencyUnit;
+
+    // Set to creation date initially; updated every time a contribution is recorded
+    @Column(name = "last_contribution_date")
+    private LocalDate lastContributionDate;
+
+    // Only set when user says "I'll contribute later" — cleared after contribution recorded
+    @Column(name = "missed_contribution_date")
+    private LocalDate missedContributionDate;
+
+    // ── Status setters ──────────────────────────────────────────────────────
     // Called when JSON provides a string like "active", "Paused", etc.
     public void setStatus(String status) {
         if (status == null) return;

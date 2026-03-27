@@ -146,3 +146,86 @@
     font-size: 13px;
   }
 }
+
+/* ── Filter tabs ── */
+.notification-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.filter-tab {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #E5E7EB;
+  background: #F9FAFB;
+  color: #6B7280;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-tab:hover {
+  background: #F3F4F6;
+  border-color: #D1D5DB;
+}
+
+.filter-tab.active {
+  background: #3B82F6;
+  border-color: #3B82F6;
+  color: white;
+}
+
+/* ── Type badge ── */
+.type-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.type-badge.contribution    { background: #FEF3C7; color: #92400E; }
+.type-badge.budget_exceeded { background: #FEE2E2; color: #991B1B; }
+.type-badge.goal_milestone  { background: #D1FAE5; color: #065F46; }
+
+/* ── Card title row ── */
+.notification-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notification-type-icon { font-size: 18px; }
+
+/* ── Mark single read button ── */
+.notification-card-actions {
+  margin-top: 10px;
+}
+
+.mark-single-read-btn {
+  font-size: 12px;
+  color: #3B82F6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.mark-single-read-btn:hover {
+  text-decoration: underline;
+}
+
+/* ── Empty state ── */
+.no-notifications {
+  text-align: center;
+  padding: 40px;
+  color: #6B7280;
+}
+
+/* ── Header subtitle ── */
+.header-subtitle {
+  color: #6B7280;
+  font-size: 14px;
+  margin-top: 4px;
+}
