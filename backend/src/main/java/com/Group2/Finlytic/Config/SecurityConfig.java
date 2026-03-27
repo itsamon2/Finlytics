@@ -3,7 +3,9 @@ package com.Group2.Finlytic.Config;
 import com.Group2.Finlytic.Service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -20,15 +22,15 @@ import java.util.List;
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
-    private final JwtFilter jwtFilter;
-    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final JwtFilter                jwtFilter;
+    private final OAuth2SuccessHandler     oAuth2SuccessHandler;
 
     public SecurityConfig(CustomUserDetailsService userDetailsService,
                           JwtFilter jwtFilter,
                           OAuth2SuccessHandler oAuth2SuccessHandler) {
-        this.userDetailsService     = userDetailsService;
-        this.jwtFilter              = jwtFilter;
-        this.oAuth2SuccessHandler   = oAuth2SuccessHandler;
+        this.userDetailsService   = userDetailsService;
+        this.jwtFilter            = jwtFilter;
+        this.oAuth2SuccessHandler = oAuth2SuccessHandler;
     }
 
     @Bean
@@ -40,12 +42,15 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/**",
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/forgot-password",
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        // /api/auth/me intentionally NOT listed — requires valid JWT
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
@@ -58,6 +63,13 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // ── ADDED: exposes AuthenticationManager so AuthController can inject it ──
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
+            throws Exception {
+        return config.getAuthenticationManager();
+    }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -67,6 +79,7 @@ public class SecurityConfig {
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
         return new UrlBasedCorsConfigurationSource() {{
             registerCorsConfiguration("/**", config);
