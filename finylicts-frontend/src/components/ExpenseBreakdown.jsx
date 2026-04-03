@@ -1,29 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { transactionService } from '../service/api';
+
+const COLORS = [
+  'var(--accent-color)', 'var(--warning-color)', '#3B82F6',
+  '#8B5CF6', '#EC4899', '#EF4444', '#10B981', '#F97316',
+];
+
+const RADIAN = Math.PI / 180;
+
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+  if (percent < 0.05) return null; // skip tiny slices
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <text x={x} y={y} fill="white" textAnchor="middle"
+          dominantBaseline="central" fontSize={12}>
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+};
 
 const ExpenseBreakdown = () => {
-  const data = [
-    { name: 'Housing', value: 1200, color: 'var(--accent-color)' },
-    { name: 'Food', value: 650, color: 'var(--warning-color)' },
-    { name: 'Transport', value: 420, color: '#3B82F6' },
-    { name: 'Entertainment', value: 310, color: '#8B5CF6' },
-    { name: 'Utilities', value: 280, color: '#EC4899' }
-  ];
+  const [data, setData]       = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    transactionService.getExpensesByCategory()
+      .then(categoryMap => {
+        const mapped = Object.entries(categoryMap)
+          .map(([name, value], index) => ({
+            name,
+            value:  parseFloat(value),
+            color:  COLORS[index % COLORS.length],
+          }))
+          .sort((a, b) => b.value - a.value); // largest slice first
+        setData(mapped);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
-  const RADIAN = Math.PI / 180;
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  if (loading) return <div className="loading">Loading breakdown...</div>;
 
-    return (
-      <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12}>
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
+  if (data.length === 0) return (
+    <div className="no-data">No expenses this month yet.</div>
+  );
 
   return (
     <div className="expense-breakdown">
@@ -37,20 +62,24 @@ const ExpenseBreakdown = () => {
               labelLine={false}
               label={renderCustomizedLabel}
               outerRadius={80}
-              fill="#8884d8"
               dataKey="value"
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} stroke="var(--bg-card)" strokeWidth={2} />
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.color}
+                  stroke="var(--bg-card)"
+                  strokeWidth={2}
+                />
               ))}
             </Pie>
-            <Tooltip 
-              formatter={(value) => [`$${value.toLocaleString()}`, 'Amount']}
-              contentStyle={{ 
-                background: 'var(--bg-card)', 
-                border: '1px solid var(--border-color)',
+            <Tooltip
+              formatter={(value) => [`Ksh ${parseFloat(value).toLocaleString()}`, 'Amount']}
+              contentStyle={{
+                background:   'var(--bg-card)',
+                border:       '1px solid var(--border-color)',
                 borderRadius: '8px',
-                color: 'var(--text-primary)'
+                color:        'var(--text-primary)',
               }}
             />
           </PieChart>
@@ -61,12 +90,14 @@ const ExpenseBreakdown = () => {
         {data.map((item, index) => (
           <div key={index} className="expense-item">
             <div className="item-left">
-              <span className="color-dot" style={{ backgroundColor: item.color }}></span>
+              <span className="color-dot" style={{ backgroundColor: item.color }} />
               <span className="item-name">{item.name}</span>
             </div>
             <div className="item-right">
-              <span className="item-amount">${item.value.toLocaleString()}</span>
-              <span className="item-percentage">{Math.round((item.value / total) * 100)}%</span>
+              <span className="item-amount">Ksh {item.value.toLocaleString()}</span>
+              <span className="item-percentage">
+                {total > 0 ? Math.round((item.value / total) * 100) : 0}%
+              </span>
             </div>
           </div>
         ))}

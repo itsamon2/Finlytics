@@ -66,6 +66,10 @@ export const transactionService = {
   getById:       (id)       => request(`/transactions/${id}`),
   getByCategory: (category) => request(`/transactions/category/${category}`),
   delete:        (id)       => request(`/transactions/${id}`, { method: 'DELETE' }),
+  getSummary:          ()   => request('/transactions/summary'),
+  getCashflow:           () => request('/transactions/cashflow'),
+  getExpensesByCategory: () => request('/transactions/expenses/category'),
+  getByMonth: (month, year) => request(`/transactions/by-month?month=${month}&year=${year}`),
 };
 
 export const budgetService = {
@@ -76,6 +80,9 @@ export const budgetService = {
   updateSpending: (id, amount) => request(`/budgets/${id}/spend?amount=${amount}`, { method: 'PATCH' }),
   isExceeded:     (id)         => request(`/budgets/${id}/exceeded`),
   delete:         (id)         => request(`/budgets/${id}`,       { method: 'DELETE' }),
+  checkRollover:   ()                    => request('/budgets/check-rollover'),
+  rollover:(continueWithSame)  => request(`/budgets/rollover?continue=${continueWithSame}`, { method: 'POST' }),
+  getByMonth:(month, year)     => request(`/budgets/by-month?month=${month}&year=${year}`),
 };
 
 export const goalsService = {

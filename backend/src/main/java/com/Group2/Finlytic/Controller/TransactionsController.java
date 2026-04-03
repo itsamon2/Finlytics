@@ -5,6 +5,7 @@ import com.Group2.Finlytic.Service.TransactionsService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -16,6 +17,8 @@ public class TransactionsController {
     public TransactionsController(TransactionsService transactionsService) {
         this.transactionsService = transactionsService;
     }
+
+    // ── Existing endpoints (unchanged) ───────────────────────────────────────
 
     @PostMapping
     public Transactions createTransaction(@RequestBody Transactions transaction) {
@@ -32,7 +35,6 @@ public class TransactionsController {
         return transactionsService.getTransactionById(id);
     }
 
-    // Fetch transactions by category — powers the budget details modal recent transactions
     @GetMapping("/category/{category}")
     public List<Transactions> getTransactionsByCategory(@PathVariable("category") String category) {
         return transactionsService.getTransactionsByCategory(category);
@@ -41,5 +43,32 @@ public class TransactionsController {
     @DeleteMapping("/{id}")
     public void deleteTransaction(@PathVariable("id") Long id) {
         transactionsService.deleteTransaction(id);
+    }
+
+    // ── New endpoints ─────────────────────────────────────────────────────────
+
+    // All summary cards + trends in one call
+    @GetMapping("/summary")
+    public Map<String, Object> getDashboardSummary() {
+        return transactionsService.getDashboardSummary();
+    }
+
+    // Monthly cashflow for the chart
+    @GetMapping("/cashflow")
+    public List<Map<String, Object>> getMonthlyCashflow() {
+        return transactionsService.getMonthlyCashflow();
+    }
+
+    // Current month expenses by category — for ExpenseBreakdown
+    @GetMapping("/expenses/category")
+    public Map<String, java.math.BigDecimal> getMonthlyExpensesByCategory() {
+        return transactionsService.getMonthlyExpensesByCategory();
+    }
+    // Get transactions filtered by month and year — for history browsing
+    @GetMapping("/by-month")
+    public List<Transactions> getTransactionsByMonth(
+            @RequestParam int month,
+            @RequestParam int year) {
+        return transactionsService.getTransactionsByMonth(month, year);
     }
 }

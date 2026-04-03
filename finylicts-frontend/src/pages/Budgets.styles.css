@@ -1201,3 +1201,40 @@
     gap: 10px;
   }
 }
+
+/* ── Historical banner ── */
+.historical-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #1E40AF;
+  gap: 12px;
+}
+
+/* ── Rollover modal badges ── */
+.rollover-budgets-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.rollover-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ── History tag in modal header ── */
+.history-tag {
+  font-size: 14px;
+  font-weight: 400;
+  color: #6B7280;
+}
