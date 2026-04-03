@@ -18,12 +18,13 @@ import ScenariosPage from './pages/ScenariosPage';
 import TaxHealthPage from './pages/TaxHealthPage';
 import SettingsPage from './pages/SettingsPage';
 import NotificationsPage from './pages/NotificationsPage';
+import ReportsPage from './pages/ReportsPage'
 import './App.css';
 
 // Placeholder pages
 const AnalysisPage = () => <div className="content-area"><h1>Analysis Page</h1><p>Coming soon...</p></div>;
 const ToolsPage = () => <div className="content-area"><h1>Tools Page</h1><p>Coming soon...</p></div>;
-const ReportsPage = () => <div className="content-area"><h1>Reports Page</h1><p>Coming soon...</p></div>;
+
 
 function App() {
   return (
