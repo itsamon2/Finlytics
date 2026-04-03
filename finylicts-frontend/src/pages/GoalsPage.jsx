@@ -15,13 +15,13 @@ const GoalsPage = () => {
 
   // ── Check-in state ─────────────────────────────────────────────────────────
   const [dueCheckIns, setDueCheckIns]         = useState([]);
-  const [activeCheckIn, setActiveCheckIn]     = useState(null);  // the goal being answered
-  const [checkInStep, setCheckInStep]         = useState(null);  // 'ask' | 'amount' | 'no-options' | 'reschedule' | 'frequency'
+  const [activeCheckIn, setActiveCheckIn]     = useState(null);
+  const [checkInStep, setCheckInStep]         = useState(null);
   const [checkInAmount, setCheckInAmount]     = useState('');
   const [rescheduleDate, setRescheduleDate]   = useState('');
   const [newFreqValue, setNewFreqValue]       = useState('');
   const [newFreqUnit, setNewFreqUnit]         = useState('DAYS');
-  const [dismissedIds, setDismissedIds]       = useState([]); // dismissed for this session
+  const [dismissedIds, setDismissedIds]       = useState([]);
 
   // ── Create form state ──────────────────────────────────────────────────────
   const [newGoal, setNewGoal] = useState({
@@ -72,7 +72,7 @@ const GoalsPage = () => {
     return () => { clearInterval(goalsInterval); clearInterval(checkInInterval); };
   }, []);
 
-  // ── Visible check-ins (not dismissed this session) ─────────────────────────
+  // ── Visible check-ins ──────────────────────────────────────────────────────
   const visibleCheckIns = dueCheckIns.filter(c => !dismissedIds.includes(c.goalId));
 
   // ── Check-in handlers ──────────────────────────────────────────────────────
@@ -94,10 +94,8 @@ const GoalsPage = () => {
     setDismissedIds(prev => [...prev, goalId]);
   };
 
-  // User said YES — go to amount confirmation step
   const handleYes = () => setCheckInStep('amount');
 
-  // User confirmed the amount (full or different)
   const handleConfirmAmount = () => {
     const amount = parseFloat(checkInAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -113,45 +111,24 @@ const GoalsPage = () => {
       .catch(err => alert(`Failed to record contribution: ${err.message}`));
   };
 
-  // User said NO — show two options
   const handleNo = () => setCheckInStep('no-options');
+  const handleDifferentAmount  = () => setCheckInStep('amount');
+  const handleContributeLater  = () => setCheckInStep('reschedule');
 
-  // User chose "different amount" from the NO options
-  const handleDifferentAmount = () => setCheckInStep('amount');
-
-  // User chose "contribute later" from the NO options
-  const handleContributeLater = () => setCheckInStep('reschedule');
-
-  // User confirmed a reschedule date
   const handleConfirmReschedule = () => {
-    if (!rescheduleDate) {
-      alert('Please pick a date');
-      return;
-    }
+    if (!rescheduleDate) { alert('Please pick a date'); return; }
     goalsService.rescheduleContribution(activeCheckIn.goalId, rescheduleDate)
-      .then(() => {
-        fetchDueCheckIns();
-        closeCheckIn();
-      })
+      .then(() => { fetchDueCheckIns(); closeCheckIn(); })
       .catch(err => alert(`Failed to reschedule: ${err.message}`));
   };
 
-  // User wants to change frequency after a reschedule
-  const handleChangeFrequency = () => setCheckInStep('frequency');
+  const handleChangeFrequency  = () => setCheckInStep('frequency');
 
-  // User confirmed a new frequency
   const handleConfirmFrequency = () => {
     const val = parseInt(newFreqValue);
-    if (isNaN(val) || val <= 0) {
-      alert('Please enter a valid frequency number');
-      return;
-    }
+    if (isNaN(val) || val <= 0) { alert('Please enter a valid frequency number'); return; }
     goalsService.updateFrequency(activeCheckIn.goalId, val, newFreqUnit)
-      .then(() => {
-        fetchGoals();
-        fetchDueCheckIns();
-        closeCheckIn();
-      })
+      .then(() => { fetchGoals(); fetchDueCheckIns(); closeCheckIn(); })
       .catch(err => alert(`Failed to update frequency: ${err.message}`));
   };
 
@@ -165,6 +142,43 @@ const GoalsPage = () => {
   const totalSaved     = goals.reduce((s, g) => s + parseFloat(g.savedAmount  || 0), 0);
   const activeGoals    = goals.filter(g => g.status === 'ACTIVE').length;
   const completedGoals = goals.filter(g => g.status === 'COMPLETED').length;
+
+  // ── Progress helpers ───────────────────────────────────────────────────────
+  const getProgress = (goal) => {
+    const target = parseFloat(goal.targetAmount);
+    const saved  = parseFloat(goal.savedAmount || 0);
+    return target > 0 ? Math.min((saved / target) * 100, 100) : 0;
+  };
+
+  const getMonthsLeft = (targetDate) => {
+    const today = new Date();
+    const end   = new Date(targetDate);
+    const diff  = (end.getFullYear() - today.getFullYear()) * 12 + (end.getMonth() - today.getMonth());
+    return Math.max(diff, 0);
+  };
+
+  // ── Contribution countdown helpers ─────────────────────────────────────────
+  const getNextContributionDate = (goal) => {
+    if (!goal.lastContributionDate || !goal.contributionFrequencyValue) return null;
+    const last = new Date(goal.lastContributionDate);
+    const val  = goal.contributionFrequencyValue;
+    switch (goal.contributionFrequencyUnit) {
+      case 'DAYS':   last.setDate(last.getDate() + val);         break;
+      case 'WEEKS':  last.setDate(last.getDate() + val * 7);     break;
+      case 'MONTHS': last.setMonth(last.getMonth() + val);       break;
+      case 'YEARS':  last.setFullYear(last.getFullYear() + val); break;
+      default: return null;
+    }
+    return last;
+  };
+
+  const getDaysToNextContribution = (goal) => {
+    const next = getNextContributionDate(goal);
+    if (!next) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.ceil((next - today) / (1000 * 60 * 60 * 24));
+  };
 
   // ── Create goal ────────────────────────────────────────────────────────────
   const handleCreateGoal = () => {
@@ -199,25 +213,8 @@ const GoalsPage = () => {
   // ── Delete goal ────────────────────────────────────────────────────────────
   const handleDeleteGoal = () => {
     goalsService.delete(showDeleteConfirm)
-      .then(() => {
-        fetchGoals();
-        setShowDeleteConfirm(null);
-      })
+      .then(() => { fetchGoals(); setShowDeleteConfirm(null); })
       .catch(err => alert(`Failed to delete goal: ${err.message}`));
-  };
-
-  // ── Progress helpers ───────────────────────────────────────────────────────
-  const getProgress = (goal) => {
-    const target = parseFloat(goal.targetAmount);
-    const saved  = parseFloat(goal.savedAmount || 0);
-    return target > 0 ? Math.min((saved / target) * 100, 100) : 0;
-  };
-
-  const getMonthsLeft = (targetDate) => {
-    const today = new Date();
-    const end   = new Date(targetDate);
-    const diff  = (end.getFullYear() - today.getFullYear()) * 12 + (end.getMonth() - today.getMonth());
-    return Math.max(diff, 0);
   };
 
   if (loading) return <div className="loading">Loading goals...</div>;
@@ -328,6 +325,7 @@ const GoalsPage = () => {
           const remaining  = parseFloat(goal.targetAmount) - parseFloat(goal.savedAmount || 0);
           const accentColor = priorityColor[goal.priority] || '#3B82F6';
           const isDue = visibleCheckIns.some(c => c.goalId === goal.goalId);
+          const daysToNext = getDaysToNextContribution(goal);
 
           return (
             <div key={goal.goalId} className={`budget-card good ${isDue ? 'checkin-due' : ''}`}>
@@ -399,6 +397,23 @@ const GoalsPage = () => {
                 <span className="goal-months">{monthsLeft} months left</span>
               </div>
 
+              {/* ── Contribution countdown ── */}
+              {daysToNext !== null && (
+                daysToNext < 0 ? (
+                  <div className="contribution-countdown overdue">
+                    ⚠️ Contribution overdue by {Math.abs(daysToNext)} day{Math.abs(daysToNext) !== 1 ? 's' : ''}
+                  </div>
+                ) : daysToNext === 0 ? (
+                  <div className="contribution-countdown due-today">
+                    🔔 Contribution due today!
+                  </div>
+                ) : (
+                  <div className="contribution-countdown upcoming">
+                    📅 Next contribution in <strong>{daysToNext}</strong> day{daysToNext !== 1 ? 's' : ''}
+                  </div>
+                )
+              )}
+
               <div className="card-actions">
                 <button className="action-btn" onClick={() => navigate(`/goals/${goal.goalId}/feasibility`)}>
                   📊 Feasibility
@@ -418,7 +433,6 @@ const GoalsPage = () => {
         <div className="modal-overlay" onClick={closeCheckIn}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
 
-            {/* ask — "Did you contribute?" */}
             {checkInStep === 'ask' && (
               <>
                 <div className="modal-header">
@@ -426,9 +440,7 @@ const GoalsPage = () => {
                   <button className="close-btn" onClick={closeCheckIn}>×</button>
                 </div>
                 <div className="modal-body">
-                  <p>
-                    Did you contribute towards <strong>{activeCheckIn.goalName}</strong>?
-                  </p>
+                  <p>Did you contribute towards <strong>{activeCheckIn.goalName}</strong>?</p>
                   <p className="checkin-expected">
                     Expected: <strong>Ksh {parseFloat(activeCheckIn.expectedAmount || 0).toLocaleString()}</strong>
                   </p>
@@ -440,7 +452,6 @@ const GoalsPage = () => {
               </>
             )}
 
-            {/* amount — enter actual amount contributed */}
             {checkInStep === 'amount' && (
               <>
                 <div className="modal-header">
@@ -469,7 +480,6 @@ const GoalsPage = () => {
               </>
             )}
 
-            {/* no-options — user said no */}
             {checkInStep === 'no-options' && (
               <>
                 <div className="modal-header">
@@ -498,7 +508,6 @@ const GoalsPage = () => {
               </>
             )}
 
-            {/* reschedule — pick a new date */}
             {checkInStep === 'reschedule' && (
               <>
                 <div className="modal-header">
@@ -534,7 +543,6 @@ const GoalsPage = () => {
               </>
             )}
 
-            {/* frequency — change contribution period */}
             {checkInStep === 'frequency' && (
               <>
                 <div className="modal-header">
@@ -658,8 +666,6 @@ const GoalsPage = () => {
                   />
                 </div>
               </div>
-
-              {/* Contribution frequency — replaces nextContributionDate */}
               <div className="form-row">
                 <div className="form-group half">
                   <label>Contribute Every</label>
@@ -684,7 +690,6 @@ const GoalsPage = () => {
                   </select>
                 </div>
               </div>
-
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>

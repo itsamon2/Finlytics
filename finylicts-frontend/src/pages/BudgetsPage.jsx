@@ -1,32 +1,39 @@
-// src/pages/BudgetsPage.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import './Budgets.styles.css';
 import { budgetService, transactionService } from '../service/api';
 
 const BudgetsPage = () => {
-  const [viewMode, setViewMode] = useState('grid');
-  const [selectedMonth, setSelectedMonth] = useState('March 2026');
+  const [viewMode, setViewMode]           = useState('grid');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedBudget, setSelectedBudget] = useState(null);
+  const [selectedBudget, setSelectedBudget]   = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
-  const [showAdjustModal, setShowAdjustModal] = useState(false);
-  const [adjustBudget, setAdjustBudget] = useState(null);
-  const [adjustAmount, setAdjustAmount] = useState('');
+  const [showAdjustModal, setShowAdjustModal]   = useState(false);
+  const [adjustBudget, setAdjustBudget]         = useState(null);
+  const [adjustAmount, setAdjustAmount]         = useState('');
 
-  // Live data state
-  const [rawBudgets, setRawBudgets] = useState([]);
+  // ── Month navigation — default to current month ──────────────────────────
+  const now = new Date();
+  const [currentMonth, setCurrentMonth] = useState(now.getMonth() + 1); // 1-12
+  const [currentYear, setCurrentYear]   = useState(now.getFullYear());
+  const isCurrentMonth = currentMonth === now.getMonth() + 1 &&
+                         currentYear  === now.getFullYear();
+
+  // ── Live data ─────────────────────────────────────────────────────────────
+  const [budgets, setBudgets]                   = useState([]);
+  const [isHistorical, setIsHistorical]         = useState(false);
   const [categoryTransactions, setCategoryTransactions] = useState([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loadingTransactions, setLoadingTransactions]   = useState(false);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
 
-  // Form state for create
+  // ── Rollover modal ────────────────────────────────────────────────────────
+  const [showRolloverModal, setShowRolloverModal] = useState(false);
+  const [rolloverLoading, setRolloverLoading]     = useState(false);
+
+  // ── Create form ───────────────────────────────────────────────────────────
   const [newBudget, setNewBudget] = useState({
-    category: '',
-    budget: '',
-    color: '#2DD4BF',
-    icon: '💰',
+    category: '', budget: '', color: '#2DD4BF', icon: '💰',
   });
 
   const months = [
@@ -35,12 +42,12 @@ const BudgetsPage = () => {
   ];
 
   const colorOptions = [
-    '#2DD4BF','#F59E0B','#3B82F6','#8B5CF6','#EC4899','#EF4444','#10B981','#F97316',
+    '#2DD4BF','#F59E0B','#3B82F6','#8B5CF6',
+    '#EC4899','#EF4444','#10B981','#F97316',
   ];
 
   const iconOptions = ['🏠','🍔','🚗','🎬','💡','🛍️','💰','📚','🏥','✈️'];
 
-  // Derive icon from category name (backend doesn't store icons)
   const getCategoryIcon = (category = '') => {
     const map = {
       FOOD: '🍔', GROCERIES: '🛒', TRANSPORT: '🚗', TRAVEL: '✈️',
@@ -52,50 +59,84 @@ const BudgetsPage = () => {
     return key ? map[key] : '💰';
   };
 
-  // ─── Fetch budgets ──────────────────────────────────────────────────────────
-  const fetchBudgets = () => {
-    budgetService.getAll()
-      .then(data => { setRawBudgets(data); setLoading(false); })
-      .catch(err  => { setError(err.message); setLoading(false); });
+  // ── Fetch budgets for selected month ─────────────────────────────────────
+const fetchBudgets = (showSpinner = true) => {
+  if (showSpinner) setLoading(true);
+  budgetService.getByMonth(currentMonth, currentYear)
+    .then(data => {
+        // data = { isCurrentMonth: bool, budgets: [...] }
+        setIsHistorical(!data.isCurrentMonth);
+        // normalize both live and history shapes to same UI shape
+        const normalized = data.budgets.map(b => ({
+          id:           b.budgetId || b.historyId,
+          category:     b.category,
+          budget:       parseFloat(b.budgetLimit),
+          spent:        parseFloat(b.amountSpent),
+          color:        b.color || '#2DD4BF',
+          icon:         getCategoryIcon(b.category),
+          budgetPeriod: b.budgetPeriod || 'MONTHLY',
+          isHistory:    !data.isCurrentMonth,
+          creationDate: b.creationDate || null,
+        }));
+        setBudgets(normalized);
+        setLoading(false);
+      })
+      .catch(err => { setError(err.message); setLoading(false); });
   };
 
+  // ── Check rollover on mount only ──────────────────────────────────────────
   useEffect(() => {
-    fetchBudgets();
-    const interval = setInterval(fetchBudgets, 10000);
-    return () => clearInterval(interval);
+    budgetService.checkRollover()
+      .then(data => {
+        if (data.rolloverNeeded) setShowRolloverModal(true);
+      })
+      .catch(() => {});
   }, []);
 
-  // ─── Map backend → same shape the original UI expects ──────────────────────
-  const budgets = useMemo(() => rawBudgets.map(b => ({
-    id:           b.budgetId,
-    category:     b.category,
-    budget:       parseFloat(b.budgetLimit),
-    spent:        parseFloat(b.amountSpent),
-    color:        b.color || '#2DD4BF',
-    icon:         getCategoryIcon(b.category),
-    trend:        '—',           // backend has no trend; shown as dash
-    transactions: 0,             // filled in details modal from transactionService
-    budgetPeriod: b.budgetPeriod || 'MONTHLY',
-  })), [rawBudgets]);
+  // ── Fetch when month changes ──────────────────────────────────────────────
+useEffect(() => {
+  fetchBudgets(true); // show spinner on month change
+  if (isCurrentMonth) {
+    const interval = setInterval(() => fetchBudgets(false), 5 * 60 * 1000); // silent refresh
+    return () => clearInterval(interval);
+  }
+}, [currentMonth, currentYear]);
 
-  // ─── Totals ─────────────────────────────────────────────────────────────────
-  const totalBudget = budgets.reduce((sum, b) => sum + b.budget, 0);
-  const totalSpent  = budgets.reduce((sum, b) => sum + b.spent,  0);
-  const remaining   = totalBudget - totalSpent;
-  const savingsRate = totalBudget > 0 ? Math.round((remaining / totalBudget) * 100) : 0;
+  // ── Totals ────────────────────────────────────────────────────────────────
+  const totalBudget  = budgets.reduce((sum, b) => sum + b.budget, 0);
+  const totalSpent   = budgets.reduce((sum, b) => sum + b.spent,  0);
+  const remaining    = totalBudget - totalSpent;
+  const savingsRate  = totalBudget > 0
+    ? Math.round((remaining / totalBudget) * 100) : 0;
 
-  // ─── Month nav ──────────────────────────────────────────────────────────────
+  // ── Month navigation ──────────────────────────────────────────────────────
   const changeMonth = (direction) => {
-    const [month, year] = selectedMonth.split(' ');
-    let monthIndex = months.indexOf(month);
-    let currentYear = parseInt(year);
-    monthIndex += direction;
-    if (monthIndex < 0)  { monthIndex = 11; currentYear -= 1; }
-    if (monthIndex > 11) { monthIndex = 0;  currentYear += 1; }
-    setSelectedMonth(`${months[monthIndex]} ${currentYear}`);
+    let m = currentMonth + direction;
+    let y = currentYear;
+    if (m < 1)  { m = 12; y -= 1; }
+    if (m > 12) { m = 1;  y += 1; }
+    setCurrentMonth(m);
+    setCurrentYear(y);
   };
 
-  // ─── Export ─────────────────────────────────────────────────────────────────
+  const selectedMonthLabel = `${months[currentMonth - 1]} ${currentYear}`;
+
+  // ── Rollover handlers ─────────────────────────────────────────────────────
+ const handleRollover = (continueWithSame) => {
+    setRolloverLoading(true);
+    budgetService.rollover(continueWithSame)
+      .then(() => {
+        setShowRolloverModal(false);
+        setRolloverLoading(false);
+        fetchBudgets(false);
+      })
+      .catch(err => {
+        alert(`Rollover failed: ${err.message}`);
+        setRolloverLoading(false);
+      });
+  };
+
+  // ── Export ────────────────────────────────────────────────────────────────
   const handleExport = () => {
     const csvContent = [
       ['Category','Budget','Spent','Remaining','Spent %'],
@@ -110,51 +151,59 @@ const BudgetsPage = () => {
     const url  = window.URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href = url;
-    a.download = `budgets-${selectedMonth.replace(' ', '-')}.csv`;
+    a.download = `budgets-${selectedMonthLabel.replace(' ', '-')}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-    alert(`✅ Exported ${budgets.length} budgets for ${selectedMonth}`);
   };
 
-  // ─── Create budget → POST to backend ────────────────────────────────────────
+  // ── Create budget ─────────────────────────────────────────────────────────
   const handleCreateBudget = () => {
     if (!newBudget.category || !newBudget.budget) {
       alert('Please fill in all fields');
       return;
     }
-    // icon is UI-only — not stored in backend, derived at render time
-    const payload = {
+    budgetService.create({
       category:     newBudget.category.toUpperCase(),
       budgetLimit:  parseFloat(newBudget.budget),
       color:        newBudget.color,
       budgetPeriod: 'MONTHLY',
-    };
-    budgetService.create(payload)
+    })
       .then(() => {
-        fetchBudgets();
+        fetchBudgets(false);
         setShowCreateModal(false);
         setNewBudget({ category: '', budget: '', color: '#2DD4BF', icon: '💰' });
-        alert(`✅ Budget created for ${newBudget.category}`);
       })
       .catch(err => alert(`Failed to create budget: ${err.message}`));
   };
 
-  // ─── View details → fetch real transactions for that category ───────────────
+  // ── View details ──────────────────────────────────────────────────────────
   const handleViewDetails = (budget) => {
     setSelectedBudget(budget);
     setCategoryTransactions([]);
     setLoadingTransactions(true);
     setShowDetailsModal(true);
-    transactionService.getByCategory(budget.category)
+
+    // For history months fetch transactions for that month/category
+    // For current month fetch all transactions for category
+    const fetchPromise = budget.isHistory
+      ? transactionService.getByMonth(currentMonth, currentYear)
+          .then(txns => txns.filter(t =>
+            t.category?.toUpperCase() === budget.category.toUpperCase()
+          ))
+      : transactionService.getByCategory(budget.category);
+
+    fetchPromise
       .then(data => {
-        const sorted = data.sort((a, b) => b.transactionId - a.transactionId).slice(0, 5);
+        const sorted = data
+          .sort((a, b) => b.transactionId - a.transactionId)
+          .slice(0, 5);
         setCategoryTransactions(sorted);
       })
       .catch(() => setCategoryTransactions([]))
       .finally(() => setLoadingTransactions(false));
   };
 
-  // ─── Adjust budget → PUT to backend ─────────────────────────────────────────
+  // ── Adjust budget ─────────────────────────────────────────────────────────
   const handleAdjustClick = (budget) => {
     setAdjustBudget(budget);
     setAdjustAmount(budget.budget.toString());
@@ -174,54 +223,70 @@ const BudgetsPage = () => {
       budgetPeriod: adjustBudget.budgetPeriod,
     })
       .then(() => {
-        fetchBudgets();
+        fetchBudgets(false);
         setShowAdjustModal(false);
         setAdjustBudget(null);
-        alert(`✅ Budget adjusted to Ksh ${newAmount.toLocaleString()}`);
       })
       .catch(err => alert(`Failed to adjust budget: ${err.message}`));
   };
 
-  // ─── Delete budget → DELETE to backend ──────────────────────────────────────
+  // ── Delete budget ─────────────────────────────────────────────────────────
   const handleDeleteClick  = (id) => setShowDeleteConfirm(id);
 
   const handleDeleteBudget = () => {
     const target = budgets.find(b => b.id === showDeleteConfirm);
     budgetService.delete(showDeleteConfirm)
       .then(() => {
-        fetchBudgets();
+        fetchBudgets(false);
         setShowDeleteConfirm(null);
         if (showDetailsModal) setShowDetailsModal(false);
-        alert(`🗑️ Budget deleted: ${target?.category}`);
       })
       .catch(err => alert(`Failed to delete budget: ${err.message}`));
   };
 
-  // ─── Loading / Error ─────────────────────────────────────────────────────────
   if (loading) return <div className="loading">Loading budgets...</div>;
   if (error)   return <div className="error">Error: {error}</div>;
 
-  // ════════════════════════════════════════════════════════════════════════════
   return (
     <div className="budgets-page">
 
-      {/* Header Section */}
+      {/* ── Header ── */}
       <div className="budgets-header">
         <div>
           <h1>Budget Planner</h1>
-          <p className="header-subtitle">Track and manage your monthly spending</p>
+          <p className="header-subtitle">
+            {isHistorical
+              ? `Viewing history for ${selectedMonthLabel}`
+              : 'Track and manage your monthly spending'}
+          </p>
         </div>
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={handleExport}>
             <span>📊</span> Export
           </button>
-          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-            <span>+</span> Create Budget
-          </button>
+          <button className="btn btn-secondary" onClick={() => fetchBudgets(false)}>
+  🔄 Refresh
+</button>
+          {isCurrentMonth && (
+            <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+              <span>+</span> Create Budget
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Overview Cards */}
+      {/* ── Historical banner ── */}
+      {isHistorical && (
+        <div className="historical-banner">
+          📅 You are viewing <strong>{selectedMonthLabel}</strong> — this is read-only history.
+          <button className="btn btn-secondary btn-sm"
+            onClick={() => { setCurrentMonth(now.getMonth() + 1); setCurrentYear(now.getFullYear()); }}>
+            Back to Current Month
+          </button>
+        </div>
+      )}
+
+      {/* ── Overview Cards ── */}
       <div className="overview-cards">
         <div className="overview-card total">
           <div className="card-icon">💰</div>
@@ -253,57 +318,73 @@ const BudgetsPage = () => {
         </div>
       </div>
 
-      {/* Budget Health */}
+      {/* ── Budget Health ── */}
       <div className="health-card">
         <div className="health-header">
           <h3>Budget Health</h3>
           <span className="health-score">{savingsRate}%</span>
         </div>
         <div className="health-bar">
-          <div className="health-progress" style={{ width: `${100 - savingsRate}%` }}></div>
+          <div className="health-progress"
+               style={{ width: `${100 - savingsRate}%` }} />
         </div>
         <p className="health-note">
           {savingsRate > 0
-            ? `You're doing great! You've saved ${savingsRate}% of your total budget.`
-            : `You've used your full budget this month.`}
+            ? `You saved ${savingsRate}% of your total budget${isHistorical ? ` in ${selectedMonthLabel}` : ''}.`
+            : `Full budget used${isHistorical ? ` in ${selectedMonthLabel}` : ' this month'}.`}
         </p>
       </div>
 
-      {/* Controls */}
+      {/* ── Controls ── */}
       <div className="controls-bar">
         <div className="month-selector">
           <button className="month-nav" onClick={() => changeMonth(-1)}>←</button>
-          <span className="current-month">{selectedMonth}</span>
-          <button className="month-nav" onClick={() => changeMonth(1)}>→</button>
+          <span className="current-month">{selectedMonthLabel}</span>
+          <button
+            className="month-nav"
+            onClick={() => changeMonth(1)}
+            disabled={isCurrentMonth}
+            style={{ opacity: isCurrentMonth ? 0.4 : 1 }}
+          >→</button>
         </div>
         <div className="view-toggle">
-          <button
-            className={`toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
-            onClick={() => setViewMode('grid')}
-          >
+          <button className={`toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                  onClick={() => setViewMode('grid')}>
             <span>⊞</span> Grid
           </button>
-          <button
-            className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => setViewMode('list')}
-          >
+          <button className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+                  onClick={() => setViewMode('list')}>
             <span>☰</span> List
           </button>
         </div>
       </div>
 
-      {/* Budget Grid */}
+      {/* ── Empty state ── */}
+      {budgets.length === 0 && (
+        <div className="no-budgets">
+          <p>
+            {isHistorical
+              ? `No budget data found for ${selectedMonthLabel}.`
+              : 'No budgets yet. Create one to start tracking!'}
+          </p>
+        </div>
+      )}
+
+      {/* ── Budget Grid ── */}
       {viewMode === 'grid' ? (
         <div className="budget-grid">
           {budgets.map((budget) => {
-            const percentage = (budget.spent / budget.budget) * 100;
-            const status = percentage > 90 ? 'danger' : percentage > 75 ? 'warning' : 'good';
+            const percentage = budget.budget > 0
+              ? (budget.spent / budget.budget) * 100 : 0;
+            const status = percentage > 90 ? 'danger'
+                         : percentage > 75 ? 'warning' : 'good';
 
             return (
               <div key={budget.id} className={`budget-card ${status}`}>
                 <div className="card-header">
                   <div className="category-info">
-                    <div className="category-icon" style={{ backgroundColor: `${budget.color}15` }}>
+                    <div className="category-icon"
+                         style={{ backgroundColor: `${budget.color}15` }}>
                       <span style={{ color: budget.color }}>{budget.icon}</span>
                     </div>
                     <div>
@@ -311,52 +392,66 @@ const BudgetsPage = () => {
                       <span className="budget-trend">{budget.budgetPeriod}</span>
                     </div>
                   </div>
-                  <button className="menu-btn" onClick={() => handleDeleteClick(budget.id)}>🗑️</button>
+                  {!isHistorical && (
+                    <button className="menu-btn"
+                            onClick={() => handleDeleteClick(budget.id)}>🗑️</button>
+                  )}
                 </div>
 
-                <div className="budget-details">
-                  <div className="amount-row">
-                    <span>Budget</span>
-                    <strong>Ksh {budget.budget.toLocaleString()}</strong>
-                  </div>
-                  <div className="amount-row">
-                    <span>Spent</span>
-                    <strong>Ksh {budget.spent.toLocaleString()}</strong>
-                  </div>
-                  <div className="amount-row">
-                    <span>Remaining</span>
-                    <strong className={budget.budget - budget.spent > 0 ? 'positive' : 'negative'}>
-                      Ksh {(budget.budget - budget.spent).toLocaleString()}
-                    </strong>
-                  </div>
-                </div>
+               <div className="budget-details">
+  <div className="amount-row">
+    <span>Budget</span>
+    <strong>Ksh {budget.budget.toLocaleString()}</strong>
+  </div>
+  <div className="amount-row">
+    <span>Spent</span>
+    <strong>Ksh {budget.spent.toLocaleString()}</strong>
+  </div>
+  <div className="amount-row">
+    <span>Remaining</span>
+    <strong className={budget.budget - budget.spent > 0 ? 'positive' : 'negative'}>
+      Ksh {(budget.budget - budget.spent).toLocaleString()}
+    </strong>
+  </div>
+  <div className="amount-row">
+    <span>Created</span>
+    <strong>{budget.creationDate || 'N/A'}</strong>
+  </div>
+</div>
 
                 <div className="progress-section">
                   <div className="progress-header">
                     <span>Progress</span>
-                    <span style={{ color: budget.color }}>{Math.round(percentage)}%</span>
+                    <span style={{ color: budget.color }}>
+                      {Math.round(percentage)}%
+                    </span>
                   </div>
                   <div className="progress-bar">
-                    <div
-                      className="progress-fill"
-                      style={{
-                        width: `${Math.min(percentage, 100)}%`,
-                        backgroundColor: budget.budget - budget.spent < 0 ? '#EF4444' : budget.color,
-                      }}
-                    ></div>
+                    <div className="progress-fill" style={{
+                      width: `${Math.min(percentage, 100)}%`,
+                      backgroundColor: budget.budget - budget.spent < 0
+                        ? '#EF4444' : budget.color,
+                    }} />
                   </div>
                 </div>
 
                 <div className="card-actions">
-                  <button className="action-btn" onClick={() => handleViewDetails(budget)}>View Details</button>
-                  <button className="action-btn" onClick={() => handleAdjustClick(budget)}>Adjust</button>
+                  <button className="action-btn"
+                          onClick={() => handleViewDetails(budget)}>
+                    View Details
+                  </button>
+                  {!isHistorical && (
+                    <button className="action-btn"
+                            onClick={() => handleAdjustClick(budget)}>
+                      Adjust
+                    </button>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       ) : (
-        /* List View */
         <div className="budget-list">
           <div className="list-header">
             <span>Category</span>
@@ -367,37 +462,41 @@ const BudgetsPage = () => {
             <span></span>
           </div>
           {budgets.map((budget) => {
-            const percentage = (budget.spent / budget.budget) * 100;
-
+            const percentage = budget.budget > 0
+              ? (budget.spent / budget.budget) * 100 : 0;
             return (
               <div key={budget.id} className="list-row">
                 <div className="category-cell">
-                  <span className="list-icon" style={{ backgroundColor: `${budget.color}15`, color: budget.color }}>
+                  <span className="list-icon"
+                        style={{ backgroundColor: `${budget.color}15`,
+                                 color: budget.color }}>
                     {budget.icon}
                   </span>
                   <span>{budget.category}</span>
                 </div>
                 <div>Ksh {budget.budget.toLocaleString()}</div>
                 <div>Ksh {budget.spent.toLocaleString()}</div>
-                <div className={budget.budget - budget.spent > 0 ? 'positive' : 'negative'}>
+                <div className={budget.budget - budget.spent > 0
+                  ? 'positive' : 'negative'}>
                   Ksh {(budget.budget - budget.spent).toLocaleString()}
                 </div>
                 <div className="progress-cell">
                   <div className="list-progress">
                     <div className="list-progress-bar">
-                      <div
-                        className="list-progress-fill"
-                        style={{
-                          width: `${Math.min(percentage, 100)}%`,
-                          backgroundColor: budget.budget - budget.spent < 0 ? '#EF4444' : budget.color,
-                        }}
-                      ></div>
+                      <div className="list-progress-fill" style={{
+                        width: `${Math.min(percentage, 100)}%`,
+                        backgroundColor: budget.budget - budget.spent < 0
+                          ? '#EF4444' : budget.color,
+                      }} />
                     </div>
                     <span>{Math.round(percentage)}%</span>
                   </div>
                 </div>
                 <div>
-                  <button className="list-menu" onClick={() => handleDeleteClick(budget.id)}>🗑️</button>
+                  {!isHistorical && (
+                    <button className="list-menu"
+                            onClick={() => handleDeleteClick(budget.id)}>🗑️</button>
+                  )}
                 </div>
               </div>
             );
@@ -405,31 +504,81 @@ const BudgetsPage = () => {
         </div>
       )}
 
-      {/* Create Budget Modal */}
+      {/* ── Rollover Modal ── */}
+      {showRolloverModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>🗓️ New Month Started!</h2>
+            </div>
+            <div className="modal-body">
+              <p>
+                It's a new month — <strong>
+                {months[now.getMonth()]} {now.getFullYear()}
+                </strong>.
+              </p>
+              <p style={{ marginTop: '10px' }}>
+                Would you like to continue with your existing budgets?
+                Your spending will reset to zero and tracking starts fresh.
+              </p>
+              <div className="rollover-budgets-preview">
+                {budgets.slice(0, 4).map((b, i) => (
+                  <span key={i} className="rollover-badge"
+                        style={{ backgroundColor: `${b.color}20`,
+                                 color: b.color }}>
+                    {b.icon} {b.category}
+                  </span>
+                ))}
+                {budgets.length > 4 && (
+                  <span className="rollover-badge">
+                    +{budgets.length - 4} more
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                disabled={rolloverLoading}
+                onClick={() => handleRollover(false)}
+              >
+                No, I'll create new ones
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={rolloverLoading}
+                onClick={() => handleRollover(true)}
+              >
+                {rolloverLoading ? 'Setting up...' : 'Yes, continue with same'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Create Budget Modal ── */}
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Create New Budget</h2>
-              <button className="close-btn" onClick={() => setShowCreateModal(false)}>×</button>
+              <button className="close-btn"
+                      onClick={() => setShowCreateModal(false)}>×</button>
             </div>
             <div className="modal-body">
               <div className="form-group">
                 <label>Category Name</label>
-                <input
-                  type="text"
+                <input type="text"
                   placeholder="e.g., FOOD, TRANSPORT, HOUSING"
                   value={newBudget.category}
-                  onChange={(e) => setNewBudget({ ...newBudget, category: e.target.value })}
+                  onChange={e => setNewBudget({ ...newBudget, category: e.target.value })}
                 />
               </div>
               <div className="form-group">
                 <label>Monthly Budget (Ksh)</label>
-                <input
-                  type="number"
-                  placeholder="0.00"
+                <input type="number" placeholder="0.00"
                   value={newBudget.budget}
-                  onChange={(e) => setNewBudget({ ...newBudget, budget: e.target.value })}
+                  onChange={e => setNewBudget({ ...newBudget, budget: e.target.value })}
                 />
               </div>
               <div className="form-row">
@@ -437,11 +586,9 @@ const BudgetsPage = () => {
                   <label>Icon</label>
                   <div className="icon-selector">
                     {iconOptions.map(icon => (
-                      <button
-                        key={icon}
+                      <button key={icon}
                         className={`icon-option ${newBudget.icon === icon ? 'active' : ''}`}
-                        onClick={() => setNewBudget({ ...newBudget, icon })}
-                      >
+                        onClick={() => setNewBudget({ ...newBudget, icon })}>
                         {icon}
                       </button>
                     ))}
@@ -451,8 +598,7 @@ const BudgetsPage = () => {
                   <label>Color</label>
                   <div className="color-selector">
                     {colorOptions.map(color => (
-                      <button
-                        key={color}
+                      <button key={color}
                         className={`color-option ${newBudget.color === color ? 'active' : ''}`}
                         style={{ backgroundColor: color }}
                         onClick={() => setNewBudget({ ...newBudget, color })}
@@ -463,20 +609,26 @@ const BudgetsPage = () => {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleCreateBudget}>Create Budget</button>
+              <button className="btn btn-secondary"
+                      onClick={() => setShowCreateModal(false)}>Cancel</button>
+              <button className="btn btn-primary"
+                      onClick={handleCreateBudget}>Create Budget</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* View Details Modal — now shows real transactions from backend */}
+      {/* ── View Details Modal ── */}
       {showDetailsModal && selectedBudget && (
         <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
-          <div className="modal-content details-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-content details-modal"
+               onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{selectedBudget.icon} {selectedBudget.category} Details</h2>
-              <button className="close-btn" onClick={() => setShowDetailsModal(false)}>×</button>
+              <h2>{selectedBudget.icon} {selectedBudget.category} Details
+                {isHistorical && <span className="history-tag"> — {selectedMonthLabel}</span>}
+              </h2>
+              <button className="close-btn"
+                      onClick={() => setShowDetailsModal(false)}>×</button>
             </div>
             <div className="modal-body">
               <div className="details-summary">
@@ -490,7 +642,8 @@ const BudgetsPage = () => {
                 </div>
                 <div className="detail-item">
                   <span>Remaining</span>
-                  <strong className={selectedBudget.budget - selectedBudget.spent > 0 ? 'positive' : 'negative'}>
+                  <strong className={selectedBudget.budget - selectedBudget.spent > 0
+                    ? 'positive' : 'negative'}>
                     Ksh {(selectedBudget.budget - selectedBudget.spent).toLocaleString()}
                   </strong>
                 </div>
@@ -503,11 +656,10 @@ const BudgetsPage = () => {
                 </div>
                 <div className="stat-box">
                   <span>Avg. Transaction</span>
-                  <h3>
-                    Ksh {categoryTransactions.length > 0
-                      ? Math.round(selectedBudget.spent / categoryTransactions.length).toLocaleString()
-                      : 0}
-                  </h3>
+                  <h3>Ksh {categoryTransactions.length > 0
+                    ? Math.round(selectedBudget.spent / categoryTransactions.length)
+                        .toLocaleString()
+                    : 0}</h3>
                 </div>
                 <div className="stat-box">
                   <span>Daily Avg</span>
@@ -519,9 +671,12 @@ const BudgetsPage = () => {
                 </div>
               </div>
 
-              {/* Recent transactions */}
               <div className="recent-transactions-preview">
-                <h3>Recent Transactions</h3>
+                <h3>
+                  {isHistorical
+                    ? `Transactions — ${selectedMonthLabel}`
+                    : 'Recent Transactions'}
+                </h3>
                 <div className="preview-list">
                   {loadingTransactions ? (
                     <p className="no-preview">Loading...</p>
@@ -529,47 +684,51 @@ const BudgetsPage = () => {
                     categoryTransactions.map(t => (
                       <div key={t.transactionId} className="preview-item">
                         <span className="preview-desc">
-                          {t.rawMessage?.length > 40 ? t.rawMessage.substring(0, 40) + '…' : t.rawMessage}
+                          {t.rawMessage?.length > 40
+                            ? t.rawMessage.substring(0, 40) + '…'
+                            : t.rawMessage}
                         </span>
                         <span className="preview-date">{t.creationDate}</span>
-                        <span className="preview-amount negative">-Ksh {t.amount?.toLocaleString()}</span>
+                        <span className="preview-amount negative">
+                          -Ksh {t.amount?.toLocaleString()}
+                        </span>
                       </div>
                     ))
                   ) : (
-                    <p className="no-preview">No transactions yet for this category</p>
+                    <p className="no-preview">No transactions for this category</p>
                   )}
                 </div>
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowDetailsModal(false)}>Close</button>
-              <button className="btn btn-primary" onClick={() => {
-                setShowDetailsModal(false);
-                handleAdjustClick(selectedBudget);
-              }}>Adjust Budget</button>
+              <button className="btn btn-secondary"
+                      onClick={() => setShowDetailsModal(false)}>Close</button>
+              {!isHistorical && (
+                <button className="btn btn-primary" onClick={() => {
+                  setShowDetailsModal(false);
+                  handleAdjustClick(selectedBudget);
+                }}>Adjust Budget</button>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Adjust Budget Modal */}
+      {/* ── Adjust Budget Modal ── */}
       {showAdjustModal && adjustBudget && (
         <div className="modal-overlay" onClick={() => setShowAdjustModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Adjust {adjustBudget.category} Budget</h2>
-              <button className="close-btn" onClick={() => setShowAdjustModal(false)}>×</button>
+              <button className="close-btn"
+                      onClick={() => setShowAdjustModal(false)}>×</button>
             </div>
             <div className="modal-body">
               <div className="form-group">
                 <label>New Budget Amount (Ksh)</label>
-                <input
-                  type="number"
-                  value={adjustAmount}
-                  onChange={(e) => setAdjustAmount(e.target.value)}
-                  placeholder="Enter new amount"
-                  autoFocus
-                />
+                <input type="number" value={adjustAmount}
+                  onChange={e => setAdjustAmount(e.target.value)}
+                  placeholder="Enter new amount" autoFocus />
               </div>
               <div className="current-info">
                 <p>Current budget: <strong>Ksh {adjustBudget.budget.toLocaleString()}</strong></p>
@@ -577,27 +736,33 @@ const BudgetsPage = () => {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowAdjustModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleAdjustBudget}>Save Changes</button>
+              <button className="btn btn-secondary"
+                      onClick={() => setShowAdjustModal(false)}>Cancel</button>
+              <button className="btn btn-primary"
+                      onClick={handleAdjustBudget}>Save Changes</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* ── Delete Confirm Modal ── */}
       {showDeleteConfirm && (
         <div className="modal-overlay" onClick={() => setShowDeleteConfirm(null)}>
-          <div className="modal-content delete-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-content delete-modal"
+               onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Delete Budget</h2>
-              <button className="close-btn" onClick={() => setShowDeleteConfirm(null)}>×</button>
+              <button className="close-btn"
+                      onClick={() => setShowDeleteConfirm(null)}>×</button>
             </div>
             <div className="modal-body">
-              <p>Are you sure you want to delete this budget? This action cannot be undone.</p>
+              <p>Are you sure you want to delete this budget? This cannot be undone.</p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowDeleteConfirm(null)}>Cancel</button>
-              <button className="btn btn-danger" onClick={handleDeleteBudget}>Delete</button>
+              <button className="btn btn-secondary"
+                      onClick={() => setShowDeleteConfirm(null)}>Cancel</button>
+              <button className="btn btn-danger"
+                      onClick={handleDeleteBudget}>Delete</button>
             </div>
           </div>
         </div>

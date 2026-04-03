@@ -10,5 +10,5 @@ import java.util.Optional;
 @Repository
 public interface BudgetManagerRepo extends JpaRepository<BudgetManager, Long> {
     List<BudgetManager> findByCategory(String category);
-    Optional<BudgetManager> findFirstByCategory(String category);
+    Optional<BudgetManager> findFirstByCategoryIgnoreCase(String category);
 }
