@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CashflowChart from './CashflowChart';
@@ -7,127 +7,192 @@ import Goals from './Goals';
 import Alerts from './Alerts';
 import UserMenu from './UserMenu';
 import NotificationBell from './NotificationBell';
+import { transactionService } from '../service/api';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { user }     = useAuth();
+  const navigate     = useNavigate();
   const [timeRange, setTimeRange] = useState('7months');
-  
-  const summary = {
-    totalBalance: 24563.00,
-    monthlyIncome: 5240.00,
-    monthlyExpenses: 3120.00,
-    netWorth: 87430.00
+
+  // ── Live data state ────────────────────────────────────────────────────────
+  const [summary, setSummary]   = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+
+  // ── Fetch dashboard summary ────────────────────────────────────────────────
+  const fetchSummary = () => {
+    transactionService.getSummary()
+      .then(data => { setSummary(data); setLoading(false); })
+      .catch(err  => { setError(err.message); setLoading(false); });
   };
 
-  // Get user's first name with fallback
-  const firstName = user?.name?.split(' ')[0] || 'Munchkin';
+  useEffect(() => {
+    fetchSummary();
+    const interval = setInterval(fetchSummary, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const firstName = user?.name?.split(' ')[0] || 'there';
+
+  const currentMonthYear = new Date().toLocaleString('default', {
+    month: 'long', year: 'numeric',
+  });
+
+  // Format trend — returns { label: '+2.5%', positive: true }
+  const formatTrend = (value) => {
+    if (value === null || value === undefined) return { label: '—', positive: true };
+    const num = parseFloat(value);
+    const positive = num >= 0;
+    return {
+      label: `${positive ? '+' : ''}${num.toFixed(1)}%`,
+      positive,
+    };
+  };
+
+  if (loading) return <div className="loading">Loading dashboard...</div>;
+  if (error)   return <div className="error">Error: {error}</div>;
+
+  const incomeTrend   = formatTrend(summary?.incomeTrend);
+  const expenseTrend  = formatTrend(summary?.expenseTrend);
+  const balanceTrend  = formatTrend(summary?.balanceTrend);
+  const savingsRate   = parseFloat(summary?.savingsRate   || 0).toFixed(1);
+  const totalBalance  = parseFloat(summary?.totalBalance  || 0);
+  const monthlyIncome = parseFloat(summary?.monthlyIncome || 0);
+  const monthlyExpenses = parseFloat(summary?.monthlyExpenses || 0);
 
   return (
     <div className="dashboard-container">
-      {/* Dashboard Header with Avatar */}
+
+      {/* ── Header ── */}
       <div className="dashboard-header">
         <div className="header-left">
           <h1>Welcome to Finlytics!</h1>
         </div>
         <div className="header-right">
-          <NotificationBell count={3} />
+          <NotificationBell />
           <UserMenu />
         </div>
       </div>
 
-      {/* Welcome Section */}
+      {/* ── Welcome card ── */}
       <div className="welcome-card">
         <div className="welcome-content">
-          <h1>Good morning, {firstName} 👋</h1>
-          <p>Here's your financial overview for March 2026</p>
+          <h1>Good {getGreeting()}, {firstName} 👋</h1>
+          <p>Here's your financial overview for {currentMonthYear}</p>
         </div>
         <div className="welcome-stats">
           <div className="welcome-stat">
-            <span className="stat-label">Net Worth</span>
-            <span className="stat-value">${summary.netWorth.toLocaleString()}</span>
+            <span className="stat-label">Total Balance</span>
+            <span className="stat-value">
+              Ksh {totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* ── Summary cards ── */}
       <div className="summary-grid">
         <div className="summary-card balance">
           <div className="card-icon">💰</div>
           <div className="card-content">
             <span className="card-label">Total Balance</span>
-            <span className="card-value">${summary.totalBalance.toLocaleString()}</span>
-            <span className="card-trend positive">+2.5%</span>
+            <span className="card-value">
+              Ksh {totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+            <span className={`card-trend ${balanceTrend.positive ? 'positive' : 'negative'}`}>
+              {balanceTrend.label}
+            </span>
           </div>
         </div>
+
         <div className="summary-card income">
           <div className="card-icon">📈</div>
           <div className="card-content">
             <span className="card-label">Monthly Income</span>
-            <span className="card-value">${summary.monthlyIncome.toLocaleString()}</span>
-            <span className="card-trend positive">+8.1%</span>
+            <span className="card-value">
+              Ksh {monthlyIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+            <span className={`card-trend ${incomeTrend.positive ? 'positive' : 'negative'}`}>
+              {incomeTrend.label}
+            </span>
           </div>
         </div>
+
         <div className="summary-card expenses">
           <div className="card-icon">📉</div>
           <div className="card-content">
             <span className="card-label">Monthly Expenses</span>
-            <span className="card-value">${summary.monthlyExpenses.toLocaleString()}</span>
-            <span className="card-trend negative">-3.2%</span>
+            <span className="card-value">
+              Ksh {monthlyExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+            {/* For expenses, a positive trend (spending more) is bad */}
+            <span className={`card-trend ${expenseTrend.positive ? 'negative' : 'positive'}`}>
+              {expenseTrend.label}
+            </span>
           </div>
         </div>
+
         <div className="summary-card savings">
           <div className="card-icon">🏦</div>
           <div className="card-content">
             <span className="card-label">Savings Rate</span>
-            <span className="card-value">32%</span>
-            <span className="card-trend positive">+5.7%</span>
+            <span className="card-value">{savingsRate}%</span>
+            <span className={`card-trend ${parseFloat(savingsRate) >= 0 ? 'positive' : 'negative'}`}>
+              {parseFloat(savingsRate) >= 20 ? 'On track 👍' : 'Needs attention'}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Main Dashboard Grid */}
+      {/* ── Main grid ── */}
       <div className="dashboard-grid">
-        {/* Left Column */}
+
+        {/* Left column */}
         <div className="grid-column">
           <div className="chart-card">
             <div className="card-header">
               <h3>Cashflow Overview</h3>
-              <select 
+              <select
                 className="chart-period"
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
               >
                 <option value="7months">Last 7 months</option>
-                <option value="30days">Last 30 days</option>
-                <option value="year">This year</option>
+                <option value="12months">Last 12 months</option>
               </select>
             </div>
             <CashflowChart timeRange={timeRange} />
           </div>
-          
+
           <div className="alerts-card">
             <div className="card-header">
               <h3>Alerts & Notifications</h3>
-              <span className="badge" onClick={() => navigate('/notifications')} style={{ cursor: 'pointer' }}>
-                3 new
+              <span
+                className="badge"
+                onClick={() => navigate('/notifications')}
+                style={{ cursor: 'pointer' }}
+              >
+                View all
               </span>
             </div>
             <Alerts />
           </div>
         </div>
 
-        {/* Right Column */}
+        {/* Right column */}
         <div className="grid-column">
           <div className="chart-card">
             <div className="card-header">
               <h3>Expense Breakdown</h3>
-              <span className="total-expense">Total: $2,860</span>
+              <span className="total-expense">
+                Total: Ksh {monthlyExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
             </div>
             <ExpenseBreakdown />
           </div>
-          
+
           <div className="goals-card">
             <div className="card-header">
               <h3>Goal Progress</h3>
@@ -136,9 +201,18 @@ const Dashboard = () => {
             <Goals />
           </div>
         </div>
+
       </div>
     </div>
   );
+};
+
+// ── Greeting helper — outside component so it doesn't re-create on render ──
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
 };
 
 export default Dashboard;

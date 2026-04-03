@@ -1,71 +1,95 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { goalsService } from '../service/api';
+
+const goalTypeEmoji = {
+  SAVINGS:    '🏦',
+  INVESTMENT: '📈',
+  DEBT:       '💳',
+  EMERGENCY:  '🛡️',
+  PURCHASE:   '🛒',
+  OTHER:      '🎯',
+};
+
+const priorityColor = {
+  HIGH:   '#EF4444',
+  MEDIUM: '#F59E0B',
+  LOW:    '#10B981',
+};
 
 const Goals = () => {
-  const navigate = useNavigate();
-  
-  const goals = [
-    { 
-      name: "Emergency Fund", 
-      current: 8500, 
-      target: 15000, 
-      color: '#2DD4BF',
-      icon: '🛡️'
-    },
-    { 
-      name: "Vacation", 
-      current: 2200, 
-      target: 5000, 
-      color: '#F59E0B',
-      icon: '✈️'
-    },
-    { 
-      name: "New Car", 
-      current: 6800, 
-      target: 25000, 
-      color: '#3B82F6',
-      icon: '🚗'
-    }
-  ];
+  const navigate          = useNavigate();
+  const [goals, setGoals] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    goalsService.getAll()
+      .then(data => {
+        // Show only active goals, max 3
+        const active = data
+          .filter(g => g.status === 'ACTIVE')
+          .slice(0, 3);
+        setGoals(active);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="loading">Loading goals...</div>;
+
+  if (goals.length === 0) return (
+    <div className="no-data" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+      No active goals yet.{' '}
+      <span
+        style={{ color: 'var(--accent-color)', cursor: 'pointer' }}
+        onClick={() => navigate('/goals')}
+      >
+        Create one →
+      </span>
+    </div>
+  );
 
   return (
     <div className="goals-grid">
-      {goals.map((goal, index) => {
-        const percentage = Math.round((goal.current / goal.target) * 100);
-        
+      {goals.map((goal) => {
+        const target     = parseFloat(goal.targetAmount  || 0);
+        const saved      = parseFloat(goal.savedAmount   || 0);
+        const percentage = target > 0 ? Math.min(Math.round((saved / target) * 100), 100) : 0;
+        const color      = priorityColor[goal.priority]  || '#3B82F6';
+
         return (
-          <div 
-            key={index} 
+          <div
+            key={goal.goalId}
             className="goal-item"
             onClick={() => navigate('/goals')}
             style={{ cursor: 'pointer' }}
           >
             <div className="goal-header">
-              <div className="goal-icon" style={{ backgroundColor: `${goal.color}15`, color: goal.color }}>
-                {goal.icon}
+              <div className="goal-icon" style={{ backgroundColor: `${color}15`, color }}>
+                {goalTypeEmoji[goal.goalType] || '🎯'}
               </div>
-              <span className="goal-name">{goal.name}</span>
+              <span className="goal-name">{goal.goalName}</span>
             </div>
-            
+
             <div className="goal-progress">
               <div className="progress-header">
                 <span>Progress</span>
-                <span className="progress-percentage">{percentage}%</span>
+                <span className="progress-percentage" style={{ color }}>{percentage}%</span>
               </div>
               <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ 
-                    width: `${percentage}%`,
-                    background: `linear-gradient(90deg, ${goal.color}, ${goal.color}dd)`
+                <div
+                  className="progress-fill"
+                  style={{
+                    width:      `${percentage}%`,
+                    background: `linear-gradient(90deg, ${color}, ${color}dd)`,
                   }}
-                ></div>
+                />
               </div>
             </div>
-            
+
             <div className="goal-footer">
-              <span className="goal-current">${goal.current.toLocaleString()}</span>
-              <span className="goal-target">of ${goal.target.toLocaleString()}</span>
+              <span className="goal-current">Ksh {saved.toLocaleString()}</span>
+              <span className="goal-target">of Ksh {target.toLocaleString()}</span>
             </div>
           </div>
         );
