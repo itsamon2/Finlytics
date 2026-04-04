@@ -6,7 +6,6 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-
 @Entity
 @Data
 @Table(name = "goals")
@@ -16,6 +15,9 @@ public class Goals {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "goal_id")
     private Long goalId;
+
+    @Column(name = "user_id", nullable = false)  // ✅ add this
+    private Long userId;
 
     @Column(name = "goal_name")
     private String goalName;
@@ -49,16 +51,24 @@ public class Goals {
     @Column(name = "contribution_amount")
     private BigDecimal contributionAmount;
 
-    @Column(name = "next_contribution_date")
-    private LocalDate nextContributionDate;
+    @Column(name = "contribution_frequency_value")
+    private Integer contributionFrequencyValue;
 
-    // Called when JSON provides a string like "active", "Paused", etc.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "contribution_frequency_unit")
+    private ContributionFrequencyUnit contributionFrequencyUnit;
+
+    @Column(name = "last_contribution_date")
+    private LocalDate lastContributionDate;
+
+    @Column(name = "missed_contribution_date")
+    private LocalDate missedContributionDate;
+
     public void setStatus(String status) {
         if (status == null) return;
         this.status = GoalStatus.valueOf(status.toUpperCase());
     }
 
-    // Called internally when you already have a GoalStatus enum
     public void setStatus(GoalStatus status) {
         this.status = status;
     }

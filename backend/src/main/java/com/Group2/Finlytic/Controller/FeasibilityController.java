@@ -13,8 +13,8 @@ public class FeasibilityController {
     FeasibilityService feasibilityService;
 
     @GetMapping("/check/{goalId}")
-    public ResponseEntity<String> checkFeasibility(@PathVariable Long goalId) {
-        String result = feasibilityService.feasibility(goalId);
+    public ResponseEntity<String> checkFeasibility(@PathVariable Long goalId,Long userId) {
+        String result = feasibilityService.feasibility(goalId,userId);
         return ResponseEntity.ok(result);
     }
 }

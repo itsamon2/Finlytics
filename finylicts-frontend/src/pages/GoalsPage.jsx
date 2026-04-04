@@ -6,103 +6,144 @@ import { goalsService } from '../service/api';
 const GoalsPage = () => {
   const navigate = useNavigate();
 
-  const [goals, setGoals] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [goals, setGoals]               = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm]     = useState('');
 
+  // ── Check-in state ─────────────────────────────────────────────────────────
+  const [dueCheckIns, setDueCheckIns]         = useState([]);
+  const [activeCheckIn, setActiveCheckIn]     = useState(null);
+  const [checkInStep, setCheckInStep]         = useState(null);
+  const [checkInAmount, setCheckInAmount]     = useState('');
+  const [rescheduleDate, setRescheduleDate]   = useState('');
+  const [newFreqValue, setNewFreqValue]       = useState('');
+  const [newFreqUnit, setNewFreqUnit]         = useState('DAYS');
+  const [dismissedIds, setDismissedIds]       = useState([]);
+
+  // ── Create form state ──────────────────────────────────────────────────────
   const [newGoal, setNewGoal] = useState({
-    goalName: '',
-    goalType: 'SAVINGS',
-    targetAmount: '',
-    savedAmount: '',
-    targetDate: '',
-    priority: 'MEDIUM',
-    status: 'ACTIVE',
-    contributionAmount: '',
-    nextContributionDate: '',
+    goalName:                  '',
+    goalType:                  'SAVINGS',
+    targetAmount:              '',
+    savedAmount:               '',
+    targetDate:                '',
+    priority:                  'MEDIUM',
+    status:                    'ACTIVE',
+    contributionAmount:        '',
+    contributionFrequencyValue: '',
+    contributionFrequencyUnit: 'MONTHS',
   });
 
   const goalTypeEmoji = {
-    SAVINGS: '🏦',
-    INVESTMENT: '📈',
-    DEBT: '💳',
-    EMERGENCY: '🛡️',
-    PURCHASE: '🛒',
-    OTHER: '🎯',
+    SAVINGS: '🏦', INVESTMENT: '📈', DEBT: '💳',
+    EMERGENCY: '🛡️', PURCHASE: '🛒', OTHER: '🎯',
   };
 
   const priorityColor = {
-    HIGH: '#EF4444',
-    MEDIUM: '#F59E0B',
-    LOW: '#10B981',
+    HIGH: '#EF4444', MEDIUM: '#F59E0B', LOW: '#10B981',
   };
 
   const statusColor = {
-    ACTIVE: '#3B82F6',
-    PAUSED: '#6B7280',
-    COMPLETED: '#10B981',
+    ACTIVE: '#3B82F6', PAUSED: '#6B7280', COMPLETED: '#10B981',
   };
 
-  // ─── Fetch goals ───────────────────────────────────────────────────────────
+  // ── Fetch goals ────────────────────────────────────────────────────────────
   const fetchGoals = () => {
     goalsService.getAll()
       .then(data => { setGoals(data); setLoading(false); })
-      .catch(err => { setError(err.message); setLoading(false); });
+      .catch(err  => { setError(err.message); setLoading(false); });
+  };
+
+  // ── Fetch due check-ins ────────────────────────────────────────────────────
+  const fetchDueCheckIns = () => {
+    goalsService.getDueCheckIns()
+      .then(data => setDueCheckIns(data))
+      .catch(() => setDueCheckIns([]));
   };
 
   useEffect(() => {
     fetchGoals();
-    const interval = setInterval(fetchGoals, 15000);
-    return () => clearInterval(interval);
+    fetchDueCheckIns();
+    const goalsInterval   = setInterval(fetchGoals, 15000);
+    const checkInInterval = setInterval(fetchDueCheckIns, 60000);
+    return () => { clearInterval(goalsInterval); clearInterval(checkInInterval); };
   }, []);
 
-  // ─── Filtered goals ────────────────────────────────────────────────────────
+  // ── Visible check-ins ──────────────────────────────────────────────────────
+  const visibleCheckIns = dueCheckIns.filter(c => !dismissedIds.includes(c.goalId));
+
+  // ── Check-in handlers ──────────────────────────────────────────────────────
+  const openCheckIn = (checkIn) => {
+    setActiveCheckIn(checkIn);
+    setCheckInStep('ask');
+    setCheckInAmount(checkIn.expectedAmount?.toString() || '');
+    setRescheduleDate('');
+    setNewFreqValue('');
+    setNewFreqUnit('DAYS');
+  };
+
+  const closeCheckIn = () => {
+    setActiveCheckIn(null);
+    setCheckInStep(null);
+  };
+
+  const dismissCheckIn = (goalId) => {
+    setDismissedIds(prev => [...prev, goalId]);
+  };
+
+  const handleYes = () => setCheckInStep('amount');
+
+  const handleConfirmAmount = () => {
+    const amount = parseFloat(checkInAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+    goalsService.confirmContribution(activeCheckIn.goalId, amount)
+      .then(() => {
+        fetchGoals();
+        fetchDueCheckIns();
+        closeCheckIn();
+      })
+      .catch(err => alert(`Failed to record contribution: ${err.message}`));
+  };
+
+  const handleNo = () => setCheckInStep('no-options');
+  const handleDifferentAmount  = () => setCheckInStep('amount');
+  const handleContributeLater  = () => setCheckInStep('reschedule');
+
+  const handleConfirmReschedule = () => {
+    if (!rescheduleDate) { alert('Please pick a date'); return; }
+    goalsService.rescheduleContribution(activeCheckIn.goalId, rescheduleDate)
+      .then(() => { fetchDueCheckIns(); closeCheckIn(); })
+      .catch(err => alert(`Failed to reschedule: ${err.message}`));
+  };
+
+  const handleChangeFrequency  = () => setCheckInStep('frequency');
+
+  const handleConfirmFrequency = () => {
+    const val = parseInt(newFreqValue);
+    if (isNaN(val) || val <= 0) { alert('Please enter a valid frequency number'); return; }
+    goalsService.updateFrequency(activeCheckIn.goalId, val, newFreqUnit)
+      .then(() => { fetchGoals(); fetchDueCheckIns(); closeCheckIn(); })
+      .catch(err => alert(`Failed to update frequency: ${err.message}`));
+  };
+
+  // ── Filtered goals ─────────────────────────────────────────────────────────
   const filteredGoals = goals.filter(g =>
     g.goalName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     g.goalType?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ─── Totals ────────────────────────────────────────────────────────────────
-  const totalTarget = goals.reduce((s, g) => s + parseFloat(g.targetAmount || 0), 0);
-  const totalSaved  = goals.reduce((s, g) => s + parseFloat(g.savedAmount  || 0), 0);
-  const activeGoals = goals.filter(g => g.status === 'ACTIVE').length;
+  // ── Totals ─────────────────────────────────────────────────────────────────
+  const totalSaved     = goals.reduce((s, g) => s + parseFloat(g.savedAmount  || 0), 0);
+  const activeGoals    = goals.filter(g => g.status === 'ACTIVE').length;
   const completedGoals = goals.filter(g => g.status === 'COMPLETED').length;
 
-  // ─── Create goal ───────────────────────────────────────────────────────────
-  const handleCreateGoal = () => {
-    if (!newGoal.goalName || !newGoal.targetAmount || !newGoal.targetDate) {
-      alert('Please fill in goal name, target amount and target date');
-      return;
-    }
-    goalsService.create({
-      ...newGoal,
-      targetAmount:       parseFloat(newGoal.targetAmount),
-      savedAmount:        parseFloat(newGoal.savedAmount || 0),
-      contributionAmount: parseFloat(newGoal.contributionAmount || 0),
-    })
-      .then(() => {
-        fetchGoals();
-        setShowCreateModal(false);
-        setNewGoal({
-          goalName: '', goalType: 'SAVINGS', targetAmount: '', savedAmount: '',
-          targetDate: '', priority: 'MEDIUM', status: 'ACTIVE',
-          contributionAmount: '', nextContributionDate: '',
-        });
-      })
-      .catch(err => alert(`Failed to create goal: ${err.message}`));
-  };
-
-  // ─── Delete goal ───────────────────────────────────────────────────────────
-  const handleDeleteGoal = () => {
-    // Goals controller doesn't have a DELETE endpoint yet — see note at bottom
-    alert('Delete not yet supported. Add a DELETE endpoint to GoalsController.');
-    setShowDeleteConfirm(null);
-  };
-
-  // ─── Progress helpers ──────────────────────────────────────────────────────
+  // ── Progress helpers ───────────────────────────────────────────────────────
   const getProgress = (goal) => {
     const target = parseFloat(goal.targetAmount);
     const saved  = parseFloat(goal.savedAmount || 0);
@@ -114,6 +155,66 @@ const GoalsPage = () => {
     const end   = new Date(targetDate);
     const diff  = (end.getFullYear() - today.getFullYear()) * 12 + (end.getMonth() - today.getMonth());
     return Math.max(diff, 0);
+  };
+
+  // ── Contribution countdown helpers ─────────────────────────────────────────
+  const getNextContributionDate = (goal) => {
+    if (!goal.lastContributionDate || !goal.contributionFrequencyValue) return null;
+    const last = new Date(goal.lastContributionDate);
+    const val  = goal.contributionFrequencyValue;
+    switch (goal.contributionFrequencyUnit) {
+      case 'DAYS':   last.setDate(last.getDate() + val);         break;
+      case 'WEEKS':  last.setDate(last.getDate() + val * 7);     break;
+      case 'MONTHS': last.setMonth(last.getMonth() + val);       break;
+      case 'YEARS':  last.setFullYear(last.getFullYear() + val); break;
+      default: return null;
+    }
+    return last;
+  };
+
+  const getDaysToNextContribution = (goal) => {
+    const next = getNextContributionDate(goal);
+    if (!next) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.ceil((next - today) / (1000 * 60 * 60 * 24));
+  };
+
+  // ── Create goal ────────────────────────────────────────────────────────────
+  const handleCreateGoal = () => {
+    if (!newGoal.goalName || !newGoal.targetAmount || !newGoal.targetDate) {
+      alert('Please fill in goal name, target amount and target date');
+      return;
+    }
+    if (!newGoal.contributionFrequencyValue || !newGoal.contributionFrequencyUnit) {
+      alert('Please set a contribution frequency');
+      return;
+    }
+    goalsService.create({
+      ...newGoal,
+      targetAmount:               parseFloat(newGoal.targetAmount),
+      savedAmount:                parseFloat(newGoal.savedAmount || 0),
+      contributionAmount:         parseFloat(newGoal.contributionAmount || 0),
+      contributionFrequencyValue: parseInt(newGoal.contributionFrequencyValue),
+    })
+      .then(() => {
+        fetchGoals();
+        fetchDueCheckIns();
+        setShowCreateModal(false);
+        setNewGoal({
+          goalName: '', goalType: 'SAVINGS', targetAmount: '', savedAmount: '',
+          targetDate: '', priority: 'MEDIUM', status: 'ACTIVE',
+          contributionAmount: '', contributionFrequencyValue: '', contributionFrequencyUnit: 'MONTHS',
+        });
+      })
+      .catch(err => alert(`Failed to create goal: ${err.message}`));
+  };
+
+  // ── Delete goal ────────────────────────────────────────────────────────────
+  const handleDeleteGoal = () => {
+    goalsService.delete(showDeleteConfirm)
+      .then(() => { fetchGoals(); setShowDeleteConfirm(null); })
+      .catch(err => alert(`Failed to delete goal: ${err.message}`));
   };
 
   if (loading) return <div className="loading">Loading goals...</div>;
@@ -134,6 +235,34 @@ const GoalsPage = () => {
           </button>
         </div>
       </div>
+
+      {/* ── Check-in Banners ── */}
+      {visibleCheckIns.length > 0 && (
+        <div className="checkin-banners">
+          {visibleCheckIns.map(checkIn => (
+            <div key={checkIn.goalId} className="checkin-banner">
+              <div className="checkin-banner-left">
+                <span className="checkin-bell">🔔</span>
+                <div>
+                  <strong>{checkIn.goalName}</strong>
+                  <p>
+                    Contribution due — Ksh {parseFloat(checkIn.expectedAmount || 0).toLocaleString()}
+                    &nbsp;·&nbsp;{Math.round(checkIn.progressPercent)}% saved so far
+                  </p>
+                </div>
+              </div>
+              <div className="checkin-banner-actions">
+                <button className="btn btn-primary btn-sm" onClick={() => openCheckIn(checkIn)}>
+                  Check In
+                </button>
+                <button className="btn btn-secondary btn-sm" onClick={() => dismissCheckIn(checkIn.goalId)}>
+                  Later
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Overview Cards ── */}
       <div className="overview-cards">
@@ -191,15 +320,20 @@ const GoalsPage = () => {
       {/* ── Goals Grid ── */}
       <div className="budget-grid">
         {filteredGoals.map(goal => {
-          const progress    = getProgress(goal);
-          const monthsLeft  = getMonthsLeft(goal.targetDate);
-          const remaining   = parseFloat(goal.targetAmount) - parseFloat(goal.savedAmount || 0);
+          const progress   = getProgress(goal);
+          const monthsLeft = getMonthsLeft(goal.targetDate);
+          const remaining  = parseFloat(goal.targetAmount) - parseFloat(goal.savedAmount || 0);
           const accentColor = priorityColor[goal.priority] || '#3B82F6';
+          const isDue = visibleCheckIns.some(c => c.goalId === goal.goalId);
+          const daysToNext = getDaysToNextContribution(goal);
 
           return (
-            <div key={goal.goalId} className="budget-card good">
+            <div key={goal.goalId} className={`budget-card good ${isDue ? 'checkin-due' : ''}`}>
 
-              {/* Card header */}
+              {isDue && (
+                <div className="due-indicator">🔔 Contribution Due</div>
+              )}
+
               <div className="card-header">
                 <div className="category-info">
                   <div className="category-icon" style={{ backgroundColor: `${accentColor}15` }}>
@@ -212,16 +346,9 @@ const GoalsPage = () => {
                     <span className="budget-trend">{goal.goalType}</span>
                   </div>
                 </div>
-                <button
-                  className="menu-btn"
-                  title="Delete goal"
-                  onClick={() => setShowDeleteConfirm(goal.goalId)}
-                >
-                  🗑️
-                </button>
+                <button className="menu-btn" onClick={() => setShowDeleteConfirm(goal.goalId)}>🗑️</button>
               </div>
 
-              {/* Amounts */}
               <div className="budget-details">
                 <div className="amount-row">
                   <span>Target</span>
@@ -237,9 +364,14 @@ const GoalsPage = () => {
                     Ksh {remaining.toLocaleString()}
                   </strong>
                 </div>
+                {goal.contributionFrequencyValue && goal.contributionFrequencyUnit && (
+                  <div className="amount-row">
+                    <span>Frequency</span>
+                    <strong>Every {goal.contributionFrequencyValue} {goal.contributionFrequencyUnit.toLowerCase()}</strong>
+                  </div>
+                )}
               </div>
 
-              {/* Progress bar */}
               <div className="progress-section">
                 <div className="progress-header">
                   <span>Progress</span>
@@ -253,35 +385,40 @@ const GoalsPage = () => {
                 </div>
               </div>
 
-              {/* Meta row */}
               <div className="goal-meta">
-                <span
-                  className="goal-badge"
-                  style={{ backgroundColor: `${priorityColor[goal.priority]}20`, color: priorityColor[goal.priority] }}
-                >
+                <span className="goal-badge"
+                  style={{ backgroundColor: `${priorityColor[goal.priority]}20`, color: priorityColor[goal.priority] }}>
                   {goal.priority}
                 </span>
-                <span
-                  className="goal-badge"
-                  style={{ backgroundColor: `${statusColor[goal.status]}20`, color: statusColor[goal.status] }}
-                >
+                <span className="goal-badge"
+                  style={{ backgroundColor: `${statusColor[goal.status]}20`, color: statusColor[goal.status] }}>
                   {goal.status}
                 </span>
                 <span className="goal-months">{monthsLeft} months left</span>
               </div>
 
-              {/* Actions */}
+              {/* ── Contribution countdown ── */}
+              {daysToNext !== null && (
+                daysToNext < 0 ? (
+                  <div className="contribution-countdown overdue">
+                    ⚠️ Contribution overdue by {Math.abs(daysToNext)} day{Math.abs(daysToNext) !== 1 ? 's' : ''}
+                  </div>
+                ) : daysToNext === 0 ? (
+                  <div className="contribution-countdown due-today">
+                    🔔 Contribution due today!
+                  </div>
+                ) : (
+                  <div className="contribution-countdown upcoming">
+                    📅 Next contribution in <strong>{daysToNext}</strong> day{daysToNext !== 1 ? 's' : ''}
+                  </div>
+                )
+              )}
+
               <div className="card-actions">
-                <button
-                  className="action-btn"
-                  onClick={() => navigate(`/goals/${goal.goalId}/feasibility`)}
-                >
+                <button className="action-btn" onClick={() => navigate(`/goals/${goal.goalId}/feasibility`)}>
                   📊 Feasibility
                 </button>
-                <button
-                  className="action-btn"
-                  onClick={() => navigate(`/goals/${goal.goalId}/advisory`)}
-                >
+                <button className="action-btn" onClick={() => navigate(`/goals/${goal.goalId}/advisory`)}>
                   💡 Advisory
                 </button>
               </div>
@@ -290,6 +427,166 @@ const GoalsPage = () => {
           );
         })}
       </div>
+
+      {/* ── Check-in Modal ── */}
+      {activeCheckIn && (
+        <div className="modal-overlay" onClick={closeCheckIn}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+
+            {checkInStep === 'ask' && (
+              <>
+                <div className="modal-header">
+                  <h2>🔔 Contribution Check-in</h2>
+                  <button className="close-btn" onClick={closeCheckIn}>×</button>
+                </div>
+                <div className="modal-body">
+                  <p>Did you contribute towards <strong>{activeCheckIn.goalName}</strong>?</p>
+                  <p className="checkin-expected">
+                    Expected: <strong>Ksh {parseFloat(activeCheckIn.expectedAmount || 0).toLocaleString()}</strong>
+                  </p>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={handleNo}>No</button>
+                  <button className="btn btn-primary" onClick={handleYes}>Yes</button>
+                </div>
+              </>
+            )}
+
+            {checkInStep === 'amount' && (
+              <>
+                <div className="modal-header">
+                  <h2>💰 Amount Contributed</h2>
+                  <button className="close-btn" onClick={closeCheckIn}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label>How much did you contribute? (Ksh)</label>
+                    <input
+                      type="number"
+                      value={checkInAmount}
+                      onChange={e => setCheckInAmount(e.target.value)}
+                      placeholder="Enter amount"
+                      autoFocus
+                    />
+                  </div>
+                  <p className="checkin-hint">
+                    Expected was Ksh {parseFloat(activeCheckIn.expectedAmount || 0).toLocaleString()} — enter the actual amount even if different.
+                  </p>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setCheckInStep('ask')}>Back</button>
+                  <button className="btn btn-primary" onClick={handleConfirmAmount}>Confirm</button>
+                </div>
+              </>
+            )}
+
+            {checkInStep === 'no-options' && (
+              <>
+                <div className="modal-header">
+                  <h2>No Problem — What Would You Like to Do?</h2>
+                  <button className="close-btn" onClick={closeCheckIn}>×</button>
+                </div>
+                <div className="modal-body checkin-options">
+                  <button className="checkin-option-btn" onClick={handleDifferentAmount}>
+                    <span>💵</span>
+                    <div>
+                      <strong>I contributed a different amount</strong>
+                      <p>Record what you actually contributed</p>
+                    </div>
+                  </button>
+                  <button className="checkin-option-btn" onClick={handleContributeLater}>
+                    <span>📅</span>
+                    <div>
+                      <strong>I'll contribute on a different date</strong>
+                      <p>Set a new date and we'll remind you then</p>
+                    </div>
+                  </button>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setCheckInStep('ask')}>Back</button>
+                </div>
+              </>
+            )}
+
+            {checkInStep === 'reschedule' && (
+              <>
+                <div className="modal-header">
+                  <h2>📅 Pick a New Date</h2>
+                  <button className="close-btn" onClick={closeCheckIn}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label>When will you contribute?</label>
+                    <input
+                      type="date"
+                      value={rescheduleDate}
+                      onChange={e => setRescheduleDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      autoFocus
+                    />
+                  </div>
+                  <p className="checkin-hint">
+                    We'll remind you on this date. After you contribute, you can also update your frequency if needed.
+                  </p>
+                  <button className="checkin-option-btn" onClick={handleChangeFrequency} style={{ marginTop: '12px' }}>
+                    <span>🔄</span>
+                    <div>
+                      <strong>Change my contribution frequency instead</strong>
+                      <p>Update how often you contribute going forward</p>
+                    </div>
+                  </button>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setCheckInStep('no-options')}>Back</button>
+                  <button className="btn btn-primary" onClick={handleConfirmReschedule}>Save Date</button>
+                </div>
+              </>
+            )}
+
+            {checkInStep === 'frequency' && (
+              <>
+                <div className="modal-header">
+                  <h2>🔄 Update Contribution Frequency</h2>
+                  <button className="close-btn" onClick={closeCheckIn}>×</button>
+                </div>
+                <div className="modal-body">
+                  <p>How often would you like to contribute going forward?</p>
+                  <div className="form-row" style={{ marginTop: '16px' }}>
+                    <div className="form-group half">
+                      <label>Every</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={newFreqValue}
+                        onChange={e => setNewFreqValue(e.target.value)}
+                        placeholder="e.g. 2"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="form-group half">
+                      <label>Unit</label>
+                      <select value={newFreqUnit} onChange={e => setNewFreqUnit(e.target.value)}>
+                        <option value="DAYS">Days</option>
+                        <option value="WEEKS">Weeks</option>
+                        <option value="MONTHS">Months</option>
+                        <option value="YEARS">Years</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p className="checkin-hint">
+                    Your next contribution date will be calculated from today using this new frequency.
+                  </p>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setCheckInStep('reschedule')}>Back</button>
+                  <button className="btn btn-primary" onClick={handleConfirmFrequency}>Update Frequency</button>
+                </div>
+              </>
+            )}
+
+          </div>
+        </div>
+      )}
 
       {/* ── Create Goal Modal ── */}
       {showCreateModal && (
@@ -360,7 +657,7 @@ const GoalsPage = () => {
                   />
                 </div>
                 <div className="form-group half">
-                  <label>Monthly Contribution (Ksh)</label>
+                  <label>Contribution Amount (Ksh)</label>
                   <input
                     type="number"
                     placeholder="0.00"
@@ -369,13 +666,29 @@ const GoalsPage = () => {
                   />
                 </div>
               </div>
-              <div className="form-group">
-                <label>Next Contribution Date</label>
-                <input
-                  type="date"
-                  value={newGoal.nextContributionDate}
-                  onChange={e => setNewGoal({ ...newGoal, nextContributionDate: e.target.value })}
-                />
+              <div className="form-row">
+                <div className="form-group half">
+                  <label>Contribute Every</label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 1"
+                    value={newGoal.contributionFrequencyValue}
+                    onChange={e => setNewGoal({ ...newGoal, contributionFrequencyValue: e.target.value })}
+                  />
+                </div>
+                <div className="form-group half">
+                  <label>Unit</label>
+                  <select
+                    value={newGoal.contributionFrequencyUnit}
+                    onChange={e => setNewGoal({ ...newGoal, contributionFrequencyUnit: e.target.value })}
+                  >
+                    <option value="DAYS">Days</option>
+                    <option value="WEEKS">Weeks</option>
+                    <option value="MONTHS">Months</option>
+                    <option value="YEARS">Years</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div className="modal-footer">
