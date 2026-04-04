@@ -6,9 +6,18 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-
 @Repository
 public interface BudgetManagerRepo extends JpaRepository<BudgetManager, Long> {
+
+    List<BudgetManager> findByUserId(Long userId);
+
+    Optional<BudgetManager> findByBudgetIdAndUserId(Long budgetId, Long userId); // ✅ fixed
+
+    List<BudgetManager> findByCategoryAndUserId(String category, Long userId);
+
+    Optional<BudgetManager> findFirstByCategoryIgnoreCaseAndUserId(String category, Long userId);
+
     List<BudgetManager> findByCategory(String category);
+
     Optional<BudgetManager> findFirstByCategoryIgnoreCase(String category);
 }

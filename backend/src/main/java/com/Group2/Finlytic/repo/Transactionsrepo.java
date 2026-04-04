@@ -7,81 +7,105 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
-
 @Repository
 public interface Transactionsrepo extends JpaRepository<Transactions, Long> {
 
-    // ── Existing queries (unchanged) ─────────────────────────────────────────
+    List<Transactions> findByUserId(Long userId);
 
-    @Query("""
-            SELECT t FROM Transactions t
-            WHERE t.type = 'EXPENSE'
-            AND MONTH(t.creationDate) = MONTH(CURRENT_DATE)
-            AND YEAR(t.creationDate) = YEAR(CURRENT_DATE)
-            """)
-    List<Transactions> findCurrentMonthExpenses();
+    List<Transactions> findByCategoryAndUserId(String category, Long userId);
 
-    @Query("""
-            SELECT t FROM Transactions t
-            WHERE t.type = 'INCOME'
-            AND MONTH(t.creationDate) = MONTH(CURRENT_DATE)
-            AND YEAR(t.creationDate) = YEAR(CURRENT_DATE)
-            """)
-    List<Transactions> findCurrentMonthIncome();
+    @Query("SELECT t FROM Transactions t WHERE t.transactionId = :id AND t.userId = :userId")
+    java.util.Optional<Transactions> findByTransactionIdAndUserId(
+            @Param("id") Long id,
+            @Param("userId") Long userId
+    );
 
-    List<Transactions> findByCategory(String category);
-
-    // ── New queries ───────────────────────────────────────────────────────────
-
-    // All income ever — for total balance calculation
-    @Query("""
-            SELECT t FROM Transactions t
-            WHERE t.type = 'INCOME'
-            """)
-    List<Transactions> findAllIncome();
-
-    // All expenses ever — for total balance calculation
-    @Query("""
-            SELECT t FROM Transactions t
-            WHERE t.type = 'EXPENSE'
-            """)
-    List<Transactions> findAllExpenses();
-
-    // Last month income — for trend comparison
-    @Query("""
-            SELECT t FROM Transactions t
-            WHERE t.type = 'INCOME'
-            AND MONTH(t.creationDate) = MONTH(CURRENT_DATE) - 1
-            AND YEAR(t.creationDate) = YEAR(CURRENT_DATE)
-            """)
-    List<Transactions> findLastMonthIncome();
-
-    // Last month expenses — for trend comparison
-    @Query("""
-            SELECT t FROM Transactions t
-            WHERE t.type = 'EXPENSE'
-            AND MONTH(t.creationDate) = MONTH(CURRENT_DATE) - 1
-            AND YEAR(t.creationDate) = YEAR(CURRENT_DATE)
-            """)
-    List<Transactions> findLastMonthExpenses();
-
-    // All transactions for cashflow chart — last 12 months
+    // ── Current month ──────────────────────────────────
     @Query("""
         SELECT t FROM Transactions t
-        WHERE t.creationDate >= :startDate
+        WHERE t.type = 'INCOME'
+          AND t.userId = :userId
+          AND t.creationDate >= :start
+          AND t.creationDate < :end
+        """)
+    List<Transactions> findCurrentMonthIncome(
+            @Param("userId") Long userId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end
+    );
+
+    @Query("""
+        SELECT t FROM Transactions t
+        WHERE t.type = 'EXPENSE'
+          AND t.userId = :userId
+          AND t.creationDate >= :start
+          AND t.creationDate < :end
+        """)
+    List<Transactions> findCurrentMonthExpenses(
+            @Param("userId") Long userId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end
+    );
+
+    // ── All time ───────────────────────────────────────
+    @Query("SELECT t FROM Transactions t WHERE t.type = 'INCOME' AND t.userId = :userId")
+    List<Transactions> findAllIncome(@Param("userId") Long userId);
+
+    @Query("SELECT t FROM Transactions t WHERE t.type = 'EXPENSE' AND t.userId = :userId")
+    List<Transactions> findAllExpenses(@Param("userId") Long userId);
+
+    // ── Last month ─────────────────────────────────────
+    @Query("""
+        SELECT t FROM Transactions t
+        WHERE t.type = 'INCOME'
+          AND t.userId = :userId
+          AND t.creationDate >= :start
+          AND t.creationDate < :end
+        """)
+    List<Transactions> findLastMonthIncome(
+            @Param("userId") Long userId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end
+    );
+
+    @Query("""
+        SELECT t FROM Transactions t
+        WHERE t.type = 'EXPENSE'
+          AND t.userId = :userId
+          AND t.creationDate >= :start
+          AND t.creationDate < :end
+        """)
+    List<Transactions> findLastMonthExpenses(
+            @Param("userId") Long userId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end
+    );
+
+    // ── Last 12 months ─────────────────────────────────
+    @Query("""
+        SELECT t FROM Transactions t
+        WHERE t.userId = :userId
+          AND t.creationDate >= :startDate
         ORDER BY t.creationDate ASC
         """)
     List<Transactions> findLast12MonthsTransactions(
-            @Param("startDate") java.time.LocalDate startDate);
-    // Transactions for a specific month and year
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate
+    );
+
+    // ── By specific month/year ─────────────────────────
     @Query("""
         SELECT t FROM Transactions t
-        WHERE MONTH(t.creationDate) = :month
-        AND YEAR(t.creationDate) = :year
+        WHERE t.userId = :userId
+          AND t.creationDate >= :start
+          AND t.creationDate < :end
         ORDER BY t.creationDate DESC
         """)
     List<Transactions> findByMonthAndYear(
-            @Param("month") int month,
-            @Param("year") int year);
+            @Param("userId") Long userId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end
+    );
 }

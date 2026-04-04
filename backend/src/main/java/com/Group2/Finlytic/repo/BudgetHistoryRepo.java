@@ -5,17 +5,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-
 @Repository
 public interface BudgetHistoryRepo extends JpaRepository<BudgetHistory, Long> {
 
-    // All budget snapshots for a specific month and year
     List<BudgetHistory> findByMonthAndYear(int month, int year);
 
-    // Check if a snapshot already exists for this month/year
-    // prevents duplicate snapshots if rollover is called twice
+    List<BudgetHistory> findByMonthAndYearAndUserId(int month, int year, Long userId);
+
     boolean existsByMonthAndYear(int month, int year);
 
-    // Single category snapshot for a month — for details modal
+    boolean existsByMonthAndYearAndUserId(int month, int year, Long userId);
+
     List<BudgetHistory> findByMonthAndYearAndCategory(int month, int year, String category);
 }

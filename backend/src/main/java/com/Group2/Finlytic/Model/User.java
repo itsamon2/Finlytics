@@ -37,4 +37,12 @@ public class User {
     private String provider; // "LOCAL" or "GOOGLE"
 
     private boolean enabled = true;
+
+    public Long getUserId() {
+        return this.id;
+    }
+
+    public boolean getEnabled() {
+        return this.enabled;
+    }
 }

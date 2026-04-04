@@ -26,15 +26,15 @@ public class FeasibilityService {
         this.chatClient = builder.build();
     }
 
-    public String feasibility(Long goalId) {
+    public String feasibility(Long goalId,Long userId) {
 
         Goals goals = goalsService.getGoalsById(goalId);
         if (goals == null) {
             throw new RuntimeException("Goal not found with id: " + goalId);
         }
 
-        BigDecimal monthlyIncome = transactionsService.getMonthlyIncome();
-        Map<String, BigDecimal> expenses = transactionsService.getMonthlyExpensesByCategory();
+        BigDecimal monthlyIncome = transactionsService.getMonthlyIncome(userId);
+        Map<String, BigDecimal> expenses = transactionsService.getMonthlyExpensesByCategory(userId);
 
         BigDecimal totalExpenses = expenses.values()
                 .stream()

@@ -19,6 +19,9 @@ public class BudgetHistory {
     @Column(name = "category", nullable = false)
     private String category;
 
+    @Column(name = "user_id", nullable = false)  // ✅ add this
+    private Long userId;
+
     @Column(name = "budget_limit", nullable = false)
     private BigDecimal budgetLimit;
 

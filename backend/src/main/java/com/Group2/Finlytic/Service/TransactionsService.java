@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
 public class TransactionsService {
 
     @Autowired
-    private Transactionsrepo transactionsrepo;
+    private Transactionsrepo transactionsRepo;
 
     @Autowired
     private CategorizationService categorizationService;
@@ -24,8 +25,7 @@ public class TransactionsService {
     @Autowired
     private BudgetManagerService budgetManagerService;
 
-    // ── Existing methods (unchanged) ─────────────────────────────────────────
-
+    // ── Save transaction ─────────────────────────────────────────
     public Transactions saveTransaction(Transactions transaction) {
         if (transaction.getRawMessage() != null && !transaction.getRawMessage().isEmpty()) {
             TransactionAnalysis analysis = categorizationService.analyze(transaction.getRawMessage());
@@ -33,30 +33,36 @@ public class TransactionsService {
             transaction.setType(Transactions.TransactionType.valueOf(analysis.transactionType()));
             transaction.setAmount(analysis.amount());
         }
-        Transactions saved = transactionsrepo.save(transaction);
+        Transactions saved = transactionsRepo.save(transaction);
         budgetManagerService.updateBudgetFromTransaction(saved);
         return saved;
     }
 
-    public List<Transactions> getAllTransactions() {
-        return transactionsrepo.findAll();
+    // ── Fetch all transactions for a user
+    public List<Transactions> getTransactionsByUserId(Long userId) {
+        return transactionsRepo.findByUserId(userId);
     }
 
-    public Optional<Transactions> getTransactionById(Long transactionId) {
-        return transactionsrepo.findById(transactionId);
+    public Optional<Transactions> getTransactionByIdAndUserId(Long id, Long userId) {
+        return transactionsRepo.findByTransactionIdAndUserId(id, userId);
     }
 
-    public List<Transactions> getTransactionsByCategory(String category) {
-        return transactionsrepo.findByCategory(category);
+    public List<Transactions> getTransactionsByCategoryAndUserId(String category, Long userId) {
+        return transactionsRepo.findByCategoryAndUserId(category, userId);
     }
 
-    public void deleteTransaction(Long transactionId) {
-        transactionsrepo.deleteById(transactionId);
+    public BigDecimal getMonthlyIncome(Long userId) {
+        LocalDate start = LocalDate.now().withDayOfMonth(1);
+        LocalDate end   = start.plusMonths(1);
+        return transactionsRepo.findCurrentMonthIncome(userId, start, end).stream()
+                .map(Transactions::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public Map<String, BigDecimal> getMonthlyExpensesByCategory() {
-        List<Transactions> expenses = transactionsrepo.findCurrentMonthExpenses();
-        return expenses.stream()
+    public Map<String, BigDecimal> getMonthlyExpensesByCategory(Long userId) {
+        LocalDate start = LocalDate.now().withDayOfMonth(1);
+        LocalDate end   = start.plusMonths(1);
+        return transactionsRepo.findCurrentMonthExpenses(userId, start, end).stream()
                 .filter(t -> t.getCategory() != null)
                 .collect(Collectors.groupingBy(
                         Transactions::getCategory,
@@ -64,57 +70,47 @@ public class TransactionsService {
                 ));
     }
 
-    public BigDecimal getMonthlyIncome() {
-        return transactionsrepo.findCurrentMonthIncome().stream()
+    // ── Total balance ─────────────────────────────────────────────
+    public BigDecimal getTotalBalance(Long userId) {
+        BigDecimal totalIncome = transactionsRepo.findAllIncome(userId).stream()
                 .map(Transactions::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    // ── New methods ───────────────────────────────────────────────────────────
-
-    // Total balance — all income ever minus all expenses ever
-    public BigDecimal getTotalBalance() {
-        BigDecimal totalIncome = transactionsrepo.findAllIncome().stream()
-                .map(Transactions::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalExpenses = transactionsrepo.findAllExpenses().stream()
+        BigDecimal totalExpenses = transactionsRepo.findAllExpenses(userId).stream()
                 .map(Transactions::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return totalIncome.subtract(totalExpenses);
     }
-
-    // Last month income — for trend
-    public BigDecimal getLastMonthIncome() {
-        return transactionsrepo.findLastMonthIncome().stream()
+    public BigDecimal getLastMonthIncome(Long userId) {
+        LocalDate start = LocalDate.now().minusMonths(1).withDayOfMonth(1);
+        LocalDate end   = LocalDate.now().withDayOfMonth(1);
+        return transactionsRepo.findLastMonthIncome(userId, start, end).stream()
                 .map(Transactions::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    // Last month expenses — for trend
-    public BigDecimal getLastMonthExpenses() {
-        return transactionsrepo.findLastMonthExpenses().stream()
+    public BigDecimal getLastMonthExpenses(Long userId) {
+        LocalDate start = LocalDate.now().minusMonths(1).withDayOfMonth(1);
+        LocalDate end   = LocalDate.now().withDayOfMonth(1);
+        return transactionsRepo.findLastMonthExpenses(userId, start, end).stream()
                 .map(Transactions::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
-
-    // Get transactions for a specific month and year
-    public List<Transactions> getTransactionsByMonth(int month, int year) {
-        return transactionsrepo.findByMonthAndYear(month, year);
+    public List<Transactions> getTransactionsByMonth(Long userId, int month, int year) {
+        LocalDate start = LocalDate.of(year, month, 1);
+        LocalDate end   = start.plusMonths(1);
+        return transactionsRepo.findByMonthAndYear(userId, start, end);
     }
 
-    // Monthly cashflow grouped by month — for the chart
-    // Returns list of { month, income, expenses } for last 12 months
-    public List<Map<String, Object>> getMonthlyCashflow() {
-        List<Transactions> transactions = transactionsrepo.findLast12MonthsTransactions(
-                java.time.LocalDate.now().minusMonths(12));
+    // ── Monthly cashflow ─────────────────────────────────────────
+    public List<Map<String, Object>> getMonthlyCashflow(Long userId) {
+        List<Transactions> transactions = transactionsRepo.findLast12MonthsTransactions(
+                userId, LocalDate.now().minusMonths(12));
 
-        // Group by "MMM yyyy" key e.g. "Jan 2026"
-        Map<String, BigDecimal> incomeByMonth  = new LinkedHashMap<>();
+        Map<String, BigDecimal> incomeByMonth = new LinkedHashMap<>();
         Map<String, BigDecimal> expenseByMonth = new LinkedHashMap<>();
 
         transactions.forEach(t -> {
-            String key = t.getCreationDate().getMonth()
-                    .getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+            String key = t.getCreationDate().getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
                     + " " + t.getCreationDate().getYear();
 
             if (t.getType() == Transactions.TransactionType.INCOME) {
@@ -124,38 +120,34 @@ public class TransactionsService {
             }
         });
 
-        // Merge into unified list preserving order
         Set<String> allMonths = new LinkedHashSet<>();
         allMonths.addAll(incomeByMonth.keySet());
         allMonths.addAll(expenseByMonth.keySet());
 
         return allMonths.stream().map(month -> {
             Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("month",    month);
-            entry.put("income",   incomeByMonth.getOrDefault(month,  BigDecimal.ZERO));
+            entry.put("month", month);
+            entry.put("income", incomeByMonth.getOrDefault(month, BigDecimal.ZERO));
             entry.put("expenses", expenseByMonth.getOrDefault(month, BigDecimal.ZERO));
             return entry;
         }).collect(Collectors.toList());
     }
 
-    // Dashboard summary — single endpoint for all cards + trends
-    public Map<String, Object> getDashboardSummary() {
-        BigDecimal thisMonthIncome   = getMonthlyIncome();
-        BigDecimal thisMonthExpenses = getMonthlyExpensesByCategory().values()
-                .stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal lastMonthIncome   = getLastMonthIncome();
-        BigDecimal lastMonthExpenses = getLastMonthExpenses();
-        BigDecimal totalBalance      = getTotalBalance();
 
-        // Savings rate — (income - expenses) / income * 100
+    public Map<String, Object> getDashboardSummary(Long userId) {
+        BigDecimal thisMonthIncome = getMonthlyIncome(userId);
+        BigDecimal thisMonthExpenses = getMonthlyExpensesByCategory(userId).values()
+                .stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal lastMonthIncome = getLastMonthIncome(userId);
+        BigDecimal lastMonthExpenses = getLastMonthExpenses(userId);
+        BigDecimal totalBalance = getTotalBalance(userId);
+
         BigDecimal savingsRate = thisMonthIncome.compareTo(BigDecimal.ZERO) > 0
                 ? thisMonthIncome.subtract(thisMonthExpenses)
                 .divide(thisMonthIncome, 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
-        // Trend helpers — percentage change vs last month
-        // positive = increase, negative = decrease
         BigDecimal incomeTrend = calculateTrend(lastMonthIncome, thisMonthIncome);
         BigDecimal expenseTrend = calculateTrend(lastMonthExpenses, thisMonthExpenses);
         BigDecimal balanceTrend = calculateTrend(
@@ -164,21 +156,23 @@ public class TransactionsService {
         );
 
         Map<String, Object> summary = new LinkedHashMap<>();
-        summary.put("totalBalance",      totalBalance);
-        summary.put("monthlyIncome",     thisMonthIncome);
-        summary.put("monthlyExpenses",   thisMonthExpenses);
-        summary.put("savingsRate",       savingsRate.setScale(1, RoundingMode.HALF_UP));
-        summary.put("incomeTrend",       incomeTrend);
-        summary.put("expenseTrend",      expenseTrend);
-        summary.put("balanceTrend",      balanceTrend);
+        summary.put("totalBalance", totalBalance);
+        summary.put("monthlyIncome", thisMonthIncome);
+        summary.put("monthlyExpenses", thisMonthExpenses);
+        summary.put("savingsRate", savingsRate.setScale(1, RoundingMode.HALF_UP));
+        summary.put("incomeTrend", incomeTrend);
+        summary.put("expenseTrend", expenseTrend);
+        summary.put("balanceTrend", balanceTrend);
         return summary;
     }
+    public void deleteTransactionByIdAndUserId(Long id, Long userId) {
+        Transactions transaction = transactionsRepo.findByTransactionIdAndUserId(id, userId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found or access denied"));
+        transactionsRepo.delete(transaction);
+    }
 
-    // % change from previous to current — returns signed percentage
     private BigDecimal calculateTrend(BigDecimal previous, BigDecimal current) {
-        if (previous == null || previous.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
-        }
+        if (previous == null || previous.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
         return current.subtract(previous)
                 .divide(previous, 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))

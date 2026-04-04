@@ -5,11 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface GoalsRepo extends JpaRepository<Goals, Long> {
 
-    List<Goals> findByGoalNameContainingIgnoreCase(String goalName);
+    List<Goals> findByUserId(Long userId);
 
-    List<Goals> findByGoalId(Long goalId);
+    Optional<Goals> findByGoalIdAndUserId(Long goalId, Long userId);
+
+    List<Goals> findByGoalNameContainingIgnoreCaseAndUserId(String goalName, Long userId);
 }

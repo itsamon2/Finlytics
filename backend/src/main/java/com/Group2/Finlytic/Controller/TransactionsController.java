@@ -2,8 +2,11 @@ package com.Group2.Finlytic.Controller;
 
 import com.Group2.Finlytic.Model.Transactions;
 import com.Group2.Finlytic.Service.TransactionsService;
+import com.Group2.Finlytic.Service.CustomUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -18,57 +21,65 @@ public class TransactionsController {
         this.transactionsService = transactionsService;
     }
 
-    // ── Existing endpoints (unchanged) ───────────────────────────────────────
-
+    // ── CREATE ──────────────────────────────────────────────
     @PostMapping
-    public Transactions createTransaction(@RequestBody Transactions transaction) {
+    public Transactions createTransaction(@RequestBody Transactions transaction,
+                                          @AuthenticationPrincipal CustomUserDetails userDetails) {
+        transaction.setUserId(userDetails.getUserId()); // tie to logged-in user
         return transactionsService.saveTransaction(transaction);
     }
 
+    // ── GET ALL ──────────────────────────────────────────────
     @GetMapping
-    public List<Transactions> getAllTransactions() {
-        return transactionsService.getAllTransactions();
+    public List<Transactions> getAllTransactions(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return transactionsService.getTransactionsByUserId(userDetails.getUserId());
     }
 
+    // ── GET BY ID ───────────────────────────────────────────
     @GetMapping("/{id}")
-    public Optional<Transactions> getTransaction(@PathVariable("id") Long id) {
-        return transactionsService.getTransactionById(id);
+    public Optional<Transactions> getTransaction(@PathVariable("id") Long id,
+                                                 @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return transactionsService.getTransactionByIdAndUserId(id, userDetails.getUserId());
     }
 
+    // ── GET BY CATEGORY ─────────────────────────────────────
     @GetMapping("/category/{category}")
-    public List<Transactions> getTransactionsByCategory(@PathVariable("category") String category) {
-        return transactionsService.getTransactionsByCategory(category);
+    public List<Transactions> getTransactionsByCategory(@PathVariable("category") String category,
+                                                        @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return transactionsService.getTransactionsByCategoryAndUserId(category, userDetails.getUserId());
     }
 
-    @DeleteMapping("/{id}")
-    public void deleteTransaction(@PathVariable("id") Long id) {
-        transactionsService.deleteTransaction(id);
-    }
-
-    // ── New endpoints ─────────────────────────────────────────────────────────
-
-    // All summary cards + trends in one call
+    // ── DASHBOARD SUMMARY ───────────────────────────────────
     @GetMapping("/summary")
-    public Map<String, Object> getDashboardSummary() {
-        return transactionsService.getDashboardSummary();
+    public Map<String, Object> getDashboardSummary(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return transactionsService.getDashboardSummary(userDetails.getUserId());
     }
 
-    // Monthly cashflow for the chart
+    // ── MONTHLY CASHFLOW ───────────────────────────────────
     @GetMapping("/cashflow")
-    public List<Map<String, Object>> getMonthlyCashflow() {
-        return transactionsService.getMonthlyCashflow();
+    public List<Map<String, Object>> getMonthlyCashflow(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return transactionsService.getMonthlyCashflow(userDetails.getUserId());
     }
 
-    // Current month expenses by category — for ExpenseBreakdown
+    // ── MONTHLY EXPENSES BY CATEGORY ───────────────────────
     @GetMapping("/expenses/category")
-    public Map<String, java.math.BigDecimal> getMonthlyExpensesByCategory() {
-        return transactionsService.getMonthlyExpensesByCategory();
+    public Map<String, BigDecimal> getMonthlyExpensesByCategory(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return transactionsService.getMonthlyExpensesByCategory(userDetails.getUserId());
     }
-    // Get transactions filtered by month and year — for history browsing
+
+    // ── FILTER BY MONTH/YEAR ───────────────────────────────
     @GetMapping("/by-month")
     public List<Transactions> getTransactionsByMonth(
             @RequestParam int month,
-            @RequestParam int year) {
-        return transactionsService.getTransactionsByMonth(month, year);
+            @RequestParam int year,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return transactionsService.getTransactionsByMonth(userDetails.getUserId(), month, year);
+    }
+
+    // ── DELETE ─────────────────────────────────────────────
+    @DeleteMapping("/{id}")
+    public void deleteTransaction(@PathVariable("id") Long id,
+                                  @AuthenticationPrincipal CustomUserDetails userDetails) {
+        transactionsService.deleteTransactionByIdAndUserId(id, userDetails.getUserId());
     }
 }

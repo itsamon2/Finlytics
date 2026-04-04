@@ -66,4 +66,5 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String token = jwtUtil.generateToken(email);
         response.sendRedirect(frontendUrl + "/auth/callback?token=" + token);
     }
+
 }
