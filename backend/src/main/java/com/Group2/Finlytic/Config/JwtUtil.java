@@ -37,11 +37,15 @@ public class JwtUtil {
         return getClaims(token).getSubject();
     }
 
-    // Check if token is valid
+
+// Check if token is valid
     public boolean isTokenValid(String token) {
         try {
-            return !getClaims(token).getExpiration().before(new Date());
+            boolean valid = !getClaims(token).getExpiration().before(new Date());
+            System.out.println("DEBUG token valid: " + valid);
+            return valid;
         } catch (Exception e) {
+            System.out.println("DEBUG token error: " + e.getMessage());
             return false;
         }
     }

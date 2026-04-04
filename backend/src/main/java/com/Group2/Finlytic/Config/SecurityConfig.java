@@ -50,11 +50,17 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
-                        // /api/auth/me intentionally NOT listed — requires valid JWT
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler)
+                )
+                .exceptionHandling(ex -> ex          // ← ADDED
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"message\": \"Unauthorized\"}");
+                        })
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -63,7 +69,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ── ADDED: exposes AuthenticationManager so AuthController can inject it ──
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
             throws Exception {
