@@ -14,7 +14,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 @Service
 public class BudgetManagerService {
 
@@ -27,14 +26,13 @@ public class BudgetManagerService {
     @Autowired
     private Transactionsrepo transactionsrepo;
 
-    // ── Existing methods ──────────────────────────────────────────────────────
-
-    public BudgetManager saveBudget(BudgetManager budget) {
-        int currentMonth = LocalDate.now().getMonthValue();
-        int currentYear  = LocalDate.now().getYear();
+    public BudgetManager saveBudget(BudgetManager budget, Long userId) {
+        budget.setUserId(userId);
+        LocalDate start = LocalDate.now().withDayOfMonth(1);
+        LocalDate end   = start.plusMonths(1);
 
         BigDecimal alreadySpent = transactionsrepo
-                .findByMonthAndYear(currentMonth, currentYear)
+                .findByMonthAndYear(userId, start, end)  // ✅ correct order + LocalDate
                 .stream()
                 .filter(t -> t.getType() == Transactions.TransactionType.EXPENSE)
                 .filter(t -> t.getCategory() != null &&
@@ -46,27 +44,27 @@ public class BudgetManagerService {
         return budgetManagerRepo.save(budget);
     }
 
-    public List<BudgetManager> getAllBudgets() {
-        return budgetManagerRepo.findAll();
+    public List<BudgetManager> getAllBudgets(Long userId) {
+        return budgetManagerRepo.findByUserId(userId);  // ✅
     }
 
-    public Optional<BudgetManager> getBudgetById(Long budgetId) {
-        return budgetManagerRepo.findById(budgetId);
+    public Optional<BudgetManager> getBudgetById(Long budgetId, Long userId) {
+        return budgetManagerRepo.findByBudgetIdAndUserId(budgetId, userId);  // ✅
     }
 
-    public List<BudgetManager> getBudgetsByCategory(String category) {
-        return budgetManagerRepo.findByCategory(category);
+    public List<BudgetManager> getBudgetsByCategory(String category, Long userId) {
+        return budgetManagerRepo.findByCategoryAndUserId(category, userId);  // ✅
     }
 
-    public Optional<BudgetManager> updateAmountSpent(Long budgetId, BigDecimal amount) {
-        return budgetManagerRepo.findById(budgetId).map(budget -> {
+    public Optional<BudgetManager> updateAmountSpent(Long budgetId, BigDecimal amount, Long userId) {
+        return budgetManagerRepo.findByBudgetIdAndUserId(budgetId, userId).map(budget -> {
             budget.setAmountSpent(budget.getAmountSpent().add(amount));
             return budgetManagerRepo.save(budget);
         });
     }
 
-    public Optional<BudgetManager> updateBudget(Long budgetId, BudgetManager updatedBudget) {
-        return budgetManagerRepo.findById(budgetId).map(existing -> {
+    public Optional<BudgetManager> updateBudget(Long budgetId, BudgetManager updatedBudget, Long userId) {
+        return budgetManagerRepo.findByBudgetIdAndUserId(budgetId, userId).map(existing -> {
             existing.setCategory(updatedBudget.getCategory());
             existing.setBudgetLimit(updatedBudget.getBudgetLimit());
             existing.setColor(updatedBudget.getColor());
@@ -77,7 +75,9 @@ public class BudgetManagerService {
 
     public void updateBudgetFromTransaction(Transactions transaction) {
         if (transaction.getType() == Transactions.TransactionType.EXPENSE) {
-            budgetManagerRepo.findFirstByCategoryIgnoreCase(transaction.getCategory())
+            budgetManagerRepo
+                    .findFirstByCategoryIgnoreCaseAndUserId(
+                            transaction.getCategory(), transaction.getUserId())  // ✅
                     .ifPresent(budget -> {
                         budget.setAmountSpent(budget.getAmountSpent().add(transaction.getAmount()));
                         budgetManagerRepo.save(budget);
@@ -85,27 +85,26 @@ public class BudgetManagerService {
         }
     }
 
-    public boolean isBudgetExceeded(Long budgetId) {
-        return budgetManagerRepo.findById(budgetId)
+    public boolean isBudgetExceeded(Long budgetId, Long userId) {
+        return budgetManagerRepo.findByBudgetIdAndUserId(budgetId, userId)
                 .map(budget -> budget.getAmountSpent().compareTo(budget.getBudgetLimit()) > 0)
                 .orElse(false);
     }
 
-    public void deleteBudget(Long budgetId) {
-        budgetManagerRepo.deleteById(budgetId);
+    public void deleteBudget(Long budgetId, Long userId) {
+        budgetManagerRepo.findByBudgetIdAndUserId(budgetId, userId)
+                .ifPresent(budget -> budgetManagerRepo.deleteById(budgetId));  // ✅ verify ownership before delete
     }
 
-    // ── New methods ───────────────────────────────────────────────────────────
-
-    public boolean isRolloverNeeded() {
+    public boolean isRolloverNeeded(Long userId) {
         int currentMonth = LocalDate.now().getMonthValue();
         int currentYear  = LocalDate.now().getYear();
 
-        if (budgetHistoryRepo.existsByMonthAndYear(currentMonth, currentYear)) {
+        if (budgetHistoryRepo.existsByMonthAndYearAndUserId(currentMonth, currentYear, userId)) {  // ✅
             return false;
         }
 
-        List<BudgetManager> budgets = budgetManagerRepo.findAll();
+        List<BudgetManager> budgets = budgetManagerRepo.findByUserId(userId);  // ✅
         if (budgets.isEmpty()) return false;
 
         return budgets.stream().anyMatch(b ->
@@ -115,17 +114,18 @@ public class BudgetManagerService {
         );
     }
 
-    public void rolloverBudgets(boolean continueWithSame) {
+    public void rolloverBudgets(boolean continueWithSame, Long userId) {
         int previousMonth = LocalDate.now().minusMonths(1).getMonthValue();
         int previousYear  = LocalDate.now().minusMonths(1).getYear();
         int currentMonth  = LocalDate.now().getMonthValue();
         int currentYear   = LocalDate.now().getYear();
 
-        List<BudgetManager> budgets = budgetManagerRepo.findAll();
+        List<BudgetManager> budgets = budgetManagerRepo.findByUserId(userId);  // ✅
 
-        if (!budgetHistoryRepo.existsByMonthAndYear(previousMonth, previousYear)) {
+        if (!budgetHistoryRepo.existsByMonthAndYearAndUserId(previousMonth, previousYear, userId)) {  // ✅
             budgets.forEach(budget -> {
                 BudgetHistory snapshot = new BudgetHistory();
+                snapshot.setUserId(userId);  // ✅
                 snapshot.setCategory(budget.getCategory());
                 snapshot.setBudgetLimit(budget.getBudgetLimit());
                 snapshot.setAmountSpent(budget.getAmountSpent());
@@ -142,8 +142,9 @@ public class BudgetManagerService {
             });
         }
 
-        if (!budgetHistoryRepo.existsByMonthAndYear(currentMonth, currentYear)) {
+        if (!budgetHistoryRepo.existsByMonthAndYearAndUserId(currentMonth, currentYear, userId)) {  // ✅
             BudgetHistory placeholder = new BudgetHistory();
+            placeholder.setUserId(userId);  // ✅
             placeholder.setCategory("__ROLLOVER_MARKER__");
             placeholder.setBudgetLimit(BigDecimal.ZERO);
             placeholder.setAmountSpent(BigDecimal.ZERO);
@@ -161,7 +162,7 @@ public class BudgetManagerService {
         }
     }
 
-    public Map<String, Object> getBudgetsByMonth(int month, int year) {
+    public Map<String, Object> getBudgetsByMonth(int month, int year, Long userId) {
         int currentMonth = LocalDate.now().getMonthValue();
         int currentYear  = LocalDate.now().getYear();
 
@@ -170,10 +171,11 @@ public class BudgetManagerService {
         if (isCurrentMonth) {
             return Map.of(
                     "isCurrentMonth", true,
-                    "budgets", budgetManagerRepo.findAll()
+                    "budgets", budgetManagerRepo.findByUserId(userId)  // ✅
             );
         } else {
-            List<BudgetHistory> history = budgetHistoryRepo.findByMonthAndYear(month, year)
+            List<BudgetHistory> history = budgetHistoryRepo
+                    .findByMonthAndYearAndUserId(month, year, userId)  // ✅
                     .stream()
                     .filter(h -> !h.getCategory().equals("__ROLLOVER_MARKER__"))
                     .toList();

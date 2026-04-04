@@ -3,18 +3,17 @@ package com.Group2.Finlytic.Controller;
 import com.Group2.Finlytic.Model.ContributionFrequencyUnit;
 import com.Group2.Finlytic.Model.GoalStatus;
 import com.Group2.Finlytic.Model.Goals;
-import com.Group2.Finlytic.Service.AdvisoryService;
-import com.Group2.Finlytic.Service.ContributionCheckService;
-import com.Group2.Finlytic.Service.FeasibilityService;
-import com.Group2.Finlytic.Service.GoalsService;
+import com.Group2.Finlytic.Service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.Group2.Finlytic.Model.ContributionFrequencyUnit;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-
+import java.util.Map;
 @RestController
 @RequestMapping("/api/goals")
 public class GoalsController {
@@ -31,47 +30,58 @@ public class GoalsController {
     @Autowired
     private ContributionCheckService contributionCheckService;
 
-    // ── Existing endpoints (unchanged) ──────────────────────────────────────
-
     @PostMapping
-    public Goals createGoals(@RequestBody Goals goals) {
+    public Goals createGoals(@RequestBody Goals goals,
+                             @AuthenticationPrincipal CustomUserDetails userDetails) {
+        goals.setUserId(userDetails.getUserId()); // ✅ scope to user
         return goalsService.createGoals(goals);
     }
 
     @GetMapping
-    public List<Goals> getAllGoals() {
-        return goalsService.getAllGoals();
+    public List<Goals> getAllGoals(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return goalsService.getAllGoalsByUserId(userDetails.getUserId()); // ✅
     }
 
     @GetMapping("/{id}")
-    public Goals getGoalsById(@PathVariable Long id) {
-        return goalsService.getGoalsById(id);
+    public Goals getGoalsById(@PathVariable Long id,
+                              @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return goalsService.getGoalsByIdAndUserId(id, userDetails.getUserId()); // ✅
     }
 
     @PutMapping
-    public Goals updateGoals(@RequestBody Goals goals) {
+    public Goals updateGoals(@RequestBody Goals goals,
+                             @AuthenticationPrincipal CustomUserDetails userDetails) {
+        goals.setUserId(userDetails.getUserId()); // ✅
         return goalsService.updateGoals(goals);
     }
 
     @PatchMapping("/id/{id}/status")
-    public Goals updateStatus(@PathVariable Long id, @RequestParam GoalStatus status) {
-        return goalsService.updateStatus(id, status);
+    public Goals updateStatus(@PathVariable Long id,
+                              @RequestParam GoalStatus status,
+                              @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return goalsService.updateStatus(id, status, userDetails.getUserId()); // ✅
     }
 
     @GetMapping("/search")
-    public List<Goals> searchGoals(@RequestParam String goal_name) {
-        return goalsService.getGoalsByName(goal_name);
+    public List<Goals> searchGoals(@RequestParam String goal_name,
+                                   @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return goalsService.getGoalsByNameAndUserId(goal_name, userDetails.getUserId()); // ✅
     }
 
     @DeleteMapping("/{id}")
-    public void deleteGoal(@PathVariable Long id) {
-        goalsService.deleteGoal(id);
+    public ResponseEntity<Map<String, Object>> deleteGoal(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        goalsService.deleteGoal(id, userDetails.getUserId());
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     @GetMapping("/{id}/advisory")
-    public ResponseEntity<String> getAdvisory(@PathVariable("id") Long id) {
+    public ResponseEntity<String> getAdvisory(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) { // ✅ was a plain Long param
         try {
-            String advice = advisoryService.advise(id);
+            String advice = advisoryService.advise(id, userDetails.getUserId());
             return ResponseEntity.ok(advice);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -79,72 +89,69 @@ public class GoalsController {
     }
 
     @GetMapping("/{id}/feasibility")
-    public ResponseEntity<String> getFeasibility(@PathVariable("id") Long id) {
+    public ResponseEntity<String> getFeasibility(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) { // ✅ was a plain Long param
         try {
-            String result = feasibilityService.feasibility(id);
+            String result = feasibilityService.feasibility(id, userDetails.getUserId());
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    // ── New contribution check-in endpoints ─────────────────────────────────
-
-    // Called on page load — returns all goals due for a check-in
     @GetMapping("/due-checkins")
-    public ResponseEntity<List<ContributionCheckService.GoalCheckInDTO>> getDueCheckIns() {
-        return ResponseEntity.ok(contributionCheckService.getDueCheckIns());
+    public ResponseEntity<List<ContributionCheckService.GoalCheckInDTO>> getDueCheckIns(
+            @AuthenticationPrincipal CustomUserDetails userDetails) { // ✅
+        return ResponseEntity.ok(contributionCheckService.getDueCheckIns(userDetails.getUserId()));
     }
 
-    // User confirmed a contribution — full amount or different amount
-    // POST /api/goals/{id}/contribute?amount=5000
     @PostMapping("/{id}/contribute")
     public ResponseEntity<Goals> confirmContribution(
             @PathVariable Long id,
-            @RequestParam BigDecimal amount) {
+            @RequestParam BigDecimal amount,
+            @AuthenticationPrincipal CustomUserDetails userDetails) { // ✅
         try {
-            Goals updated = contributionCheckService.confirmContribution(id, amount);
+            Goals updated = contributionCheckService.confirmContribution(id, amount, userDetails.getUserId());
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    // User said "I'll contribute later" — stores a rescheduled date
-    // POST /api/goals/{id}/reschedule?newDate=2026-04-05
     @PostMapping("/{id}/reschedule")
     public ResponseEntity<Goals> rescheduleContribution(
             @PathVariable Long id,
-            @RequestParam LocalDate newDate) {
+            @RequestParam LocalDate newDate,
+            @AuthenticationPrincipal CustomUserDetails userDetails) { // ✅
         try {
-            Goals updated = contributionCheckService.rescheduleContribution(id, newDate);
+            Goals updated = contributionCheckService.rescheduleContribution(id, newDate, userDetails.getUserId());
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    // User wants to change their contribution frequency
-    // POST /api/goals/{id}/frequency?value=5&unit=DAYS
     @PostMapping("/{id}/frequency")
     public ResponseEntity<Goals> updateFrequency(
             @PathVariable Long id,
             @RequestParam Integer value,
-            @RequestParam ContributionFrequencyUnit unit) {
+            @RequestParam ContributionFrequencyUnit unit,
+            @AuthenticationPrincipal CustomUserDetails userDetails) { // ✅
         try {
-            Goals updated = contributionCheckService.updateFrequencyAfterMiss(id, value, unit);
+            Goals updated = contributionCheckService.updateFrequencyAfterMiss(id, value, unit, userDetails.getUserId());
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    // Returns the calculated next contribution date for a goal
-    // GET /api/goals/{id}/next-contribution
     @GetMapping("/{id}/next-contribution")
-    public ResponseEntity<LocalDate> getNextContributionDate(@PathVariable Long id) {
+    public ResponseEntity<LocalDate> getNextContributionDate(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) { // ✅
         try {
-            Goals goal = goalsService.getGoalsById(id);
+            Goals goal = goalsService.getGoalsByIdAndUserId(id, userDetails.getUserId());
             LocalDate next = goalsService.getNextContributionDate(goal);
             return next != null ? ResponseEntity.ok(next) : ResponseEntity.noContent().build();
         } catch (RuntimeException e) {

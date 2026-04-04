@@ -29,7 +29,7 @@ public class AdvisoryService {
         this.chatClient = builder.build();
     }
 
-    public String advise(Long goalId) {
+    public String advise(Long goalId,Long userId) {
 
         // ── Goal data ──────────────────────────────────────────────────────────
         Goals goal = goalsService.getGoalsById(goalId);
@@ -37,9 +37,9 @@ public class AdvisoryService {
             throw new RuntimeException("Goal not found with id: " + goalId);
         }
 
-        // ── Financial data ─────────────────────────────────────────────────────
-        BigDecimal monthlyIncome = transactionsService.getMonthlyIncome();
-        Map<String, BigDecimal> expenses = transactionsService.getMonthlyExpensesByCategory();
+        // ── Financial data
+        BigDecimal monthlyIncome = transactionsService.getMonthlyIncome(userId);
+        Map<String, BigDecimal> expenses = transactionsService.getMonthlyExpensesByCategory(userId);
         BigDecimal totalExpenses = expenses.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal monthlySurplus = monthlyIncome.subtract(totalExpenses);
 

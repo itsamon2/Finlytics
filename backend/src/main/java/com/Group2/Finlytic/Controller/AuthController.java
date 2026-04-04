@@ -2,6 +2,7 @@ package com.Group2.Finlytic.Controller;
 
 import com.Group2.Finlytic.Config.JwtUtil;
 import com.Group2.Finlytic.Model.User;
+import com.Group2.Finlytic.Service.CustomUserDetails;
 import com.Group2.Finlytic.Service.UserService;
 import com.Group2.Finlytic.repo.UserRepo;
 import org.springframework.http.HttpStatus;
@@ -101,7 +102,7 @@ public class AuthController {
     // ── GET /api/auth/me ─────────────────────────────────────────────────────
     // Called by OAuthCallback.jsx after Google login to fetch user profile
     @GetMapping("/me")
-    public ResponseEntity<?> getMe(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> getMe(@AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "Unauthorized"));

@@ -16,6 +16,9 @@ public class BudgetManager {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long budgetId;
 
+    @Column(name = "user_id", nullable = false)  // ✅ add this
+    private Long userId;
+
     @Column(nullable = false, length = 100)
     private String category;
 
