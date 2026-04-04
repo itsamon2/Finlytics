@@ -244,7 +244,7 @@ const ReportsPage = () => {
       {/* AI INSIGHTS */}
       {insights.length > 0 && (
         <div className="insights">
-          <h3>AI Insights</h3>
+          <h3>Insights</h3>
           {insights.map((i, idx) => <p key={idx}>{i}</p>)}
         </div>
       )}
