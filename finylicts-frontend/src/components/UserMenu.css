@@ -74,7 +74,7 @@
   transform: rotate(180deg);
 }
 
-/* Dropdown */
+/* ── Dropdown — desktop ── */
 .user-dropdown {
   position: absolute;
   top: calc(100% + 10px);
@@ -82,7 +82,7 @@
   width: 280px;
   background: var(--bg-card);
   border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border-color);
   z-index: 1200;
   overflow: hidden;
@@ -152,6 +152,7 @@
   margin: 8px 0;
 }
 
+/* Full-screen overlay to catch outside taps */
 .user-menu-overlay {
   position: fixed;
   top: 0;
@@ -161,7 +162,7 @@
   z-index: 1199;
 }
 
-/* Responsive */
+/* ── Mobile ── */
 @media (max-width: 768px) {
   .user-name {
     display: none;
@@ -177,8 +178,19 @@
     font-size: 14px;
   }
 
+  /*
+   * Detach from relative parent on mobile.
+   * Pin to the top-right corner of the viewport so the
+   * dropdown never clips left or gets hidden behind other layers.
+   */
   .user-dropdown {
-    width: 260px;
+    position: fixed;
+    top: 72px;
+    right: 12px;
+    left: auto;
+    width: calc(100vw - 24px);
+    max-width: 320px;
+    border-radius: 16px;
   }
 }
 
@@ -187,5 +199,12 @@
     width: 32px;
     height: 32px;
     font-size: 12px;
+  }
+
+  .user-dropdown {
+    top: 68px;
+    right: 12px;
+    width: calc(100vw - 24px);
+    max-width: 300px;
   }
 }
