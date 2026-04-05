@@ -1,57 +1,112 @@
 # Finlytics 💸
 
-> **Your personal finance, fully in control.**  
-> Track, budget, plan, and simulate — all in one intelligent platform.
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0A0A0A,100:6DB33F&height=140&section=header"/>
+</p>
 
-![React](https://img.shields.io/badge/React.js-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-[![Spring Boot](https://shields.io)](https://img.shields.io/badge/SpringBoot-6DB33F?style=flat-square&logo=Spring&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
-![DRF](https://img.shields.io/badge/Django_REST_Framework-ff1709?style=for-the-badge&logo=django&logoColor=white)
-
----
-
-## What is Finlytics?
-
-Finlytics is a web-based personal finance platform that goes beyond simple expense tracking. It integrates real-time financial tracking, smart budgeting, goal planning, scenario simulation, and an intelligent advisory engine — giving users a complete picture of their financial health and the tools to improve it.
+<p align="center">
+  <strong>Your personal finance, fully in control.</strong><br/>
+  Track • Budget • Plan • Simulate • Grow
+</p>
 
 ---
 
-## Features
+## 🚀 Tech Stack
+
+<p align="center">
+
+  <img src="https://img.shields.io/badge/React-0A0A0A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+  <img src="https://img.shields.io/badge/Spring_Boot-0A0A0A?style=for-the-badge&logo=springboot&logoColor=6DB33F" />
+  <img src="https://img.shields.io/badge/PostgreSQL-0A0A0A?style=for-the-badge&logo=postgresql&logoColor=316192" />
+  <img src="https://img.shields.io/badge/Django_REST-0A0A0A?style=for-the-badge&logo=django&logoColor=00C853" />
+
+</p>
+
+---
+
+## 📌 What is Finlytics?
+
+Finlytics is a **next-generation personal finance platform** that goes beyond simple expense tracking.
+
+It combines:
+- 📊 Real-time financial tracking  
+- 💰 Smart budgeting  
+- 🎯 Goal planning  
+- 🔍 Feasibility analysis  
+- 🤖 AI-powered recommendations  
+- 🔄 Scenario simulation  
+
+All in one intelligent system — giving you full control over your financial future.
+
+---
+
+## ✨ Features
 
 ### 📊 Financial Dashboard
-Real-time overview of your income, expenses, cash flow, and net worth — all in one place. Track recurring transactions, categorize spending, and monitor your complete financial position at a glance.
+Get a complete real-time overview of your:
+- Income  
+- Expenses  
+- Cash flow  
+- Net worth  
 
-### 💰 Budget Management
-Create category-based budgets, set monthly limits, and track planned vs actual spending in real time. Visual alerts notify you the moment you're heading toward overspending.
-
-### 🎯 Goal Planning
-Set short and long-term financial goals — savings, property, education, emergency funds. Finlytics breaks them into required monthly contributions, tracks progress automatically, and adjusts projections as your finances change.
-
-### 🔍 Feasibility & Gap Analysis
-Before you commit to a goal, Finlytics tells you whether it's achievable. It identifies funding gaps, calculates required contributions, and prioritizes goals when resources are limited.
-
-### 🤖 Advisory & Recommendation Engine
-Personalized, explainable financial advice based on your actual data. The engine detects when you're off-track, suggests spending adjustments, and recommends savings strategies — in plain language.
-
-### 🔄 Scenario Simulation
-Thinking of taking a loan? Making a large purchase? Changing jobs? Simulate any financial decision before you make it. See the impact on your goals, net worth, and financial safety — instantly.
-
-### 🏥 Tax & Financial Health
-Track your savings rate, debt-to-income ratio, emergency fund coverage, and financial stability score. Get benchmark comparisons and watch your financial health improve over time.
-
-### 📑 Reports & Analytics
-Monthly and annual summaries, spending trend charts, income vs expense visualizations, and exportable reports in CSV and PDF format.
-
-
-
-
-
-## License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+Track recurring transactions and monitor your financial position at a glance.
 
 ---
 
-<div align="center">
-  Built with ❤️ by the Finlytics Team
-</div>
+### 💰 Budget Management
+- Set category-based budgets  
+- Define monthly spending limits  
+- Track planned vs actual spending  
+- Get alerts before overspending  
+
+---
+
+### 🎯 Goal Planning
+- Set short & long-term goals  
+- Automatic monthly contribution calculation  
+- Real-time progress tracking  
+- Dynamic projections  
+
+---
+
+### 🔍 Feasibility & Gap Analysis
+- Know if your goals are achievable  
+- Identify funding gaps  
+- Get priority-based recommendations  
+
+---
+
+### 🤖 Advisory Engine
+- Smart, data-driven insights  
+- Personalized financial recommendations  
+- Detect risks and suggest improvements  
+
+---
+
+### 🔄 Scenario Simulation
+Simulate decisions like:
+- Taking a loan  
+- Big purchases  
+- Job changes  
+
+See their impact instantly before committing.
+
+---
+
+### 🏥 Financial Health Tracking
+Monitor:
+- Savings rate  
+- Debt-to-income ratio  
+- Emergency fund coverage  
+- Financial stability score  
+
+---
+
+### 📑 Reports & Analytics
+- Monthly & annual reports  
+- Spending trends  
+- Visual charts  
+- Export to CSV & PDF  
+
+---
+
