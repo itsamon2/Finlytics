@@ -1,6 +1,7 @@
 .user-menu-container {
   position: relative;
   display: inline-block;
+  z-index: 1200;
 }
 
 .user-menu-button {
@@ -83,7 +84,7 @@
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-color);
-  z-index: 1000;
+  z-index: 1200;
   overflow: hidden;
 }
 
@@ -157,7 +158,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 999;
+  z-index: 1199;
 }
 
 /* Responsive */
@@ -165,17 +166,17 @@
   .user-name {
     display: none;
   }
-  
+
   .user-menu-button {
     padding: 6px;
   }
-  
+
   .user-avatar {
     width: 36px;
     height: 36px;
     font-size: 14px;
   }
-  
+
   .user-dropdown {
     width: 260px;
   }
