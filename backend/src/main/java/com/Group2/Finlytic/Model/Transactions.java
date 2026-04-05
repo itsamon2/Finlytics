@@ -26,7 +26,6 @@ public class Transactions {
     @Column(name = "raw_message")
     private String rawMessage;
 
-
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
@@ -36,11 +35,6 @@ public class Transactions {
     @CreationTimestamp
     @Column(name = "creation_date", updatable = false)
     private LocalDate creationDate;
-
-    public Long setUserId(Long userId) {
-        return this.transactionId;
-
-    }
 
     public enum TransactionType {
         INCOME,
