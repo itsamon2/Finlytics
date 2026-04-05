@@ -1,6 +1,7 @@
 .notification-container {
   position: relative;
   display: inline-block;
+  z-index: 1200;
 }
 
 .notification-bell {
@@ -51,12 +52,12 @@
 }
 
 @keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.1); }
   100% { transform: scale(1); }
 }
 
-/* Dropdown */
+/* ── Dropdown — desktop ── */
 .notification-dropdown {
   position: absolute;
   top: calc(100% + 10px);
@@ -66,7 +67,7 @@
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-color);
-  z-index: 1000;
+  z-index: 1200;
   overflow: hidden;
 }
 
@@ -175,19 +176,40 @@
   text-decoration: underline;
 }
 
+/* Full-screen overlay to catch outside taps */
 .notification-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 999;
+  z-index: 1199;
 }
 
-/* Responsive */
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  /*
+   * Detach from relative parent — pin to viewport top-right.
+   * This prevents the dropdown from clipping off the left edge
+   * or being hidden behind other stacking contexts.
+   */
+  .notification-dropdown {
+    position: fixed;
+    top: 72px;
+    right: 12px;
+    left: 12px;         /* stretch edge-to-edge with 12px gutters */
+    width: auto;
+    max-width: 420px;
+    border-radius: 16px;
+  }
+}
+
 @media (max-width: 480px) {
   .notification-dropdown {
-    width: 300px;
-    right: -50px;
+    top: 68px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    border-radius: 14px;
   }
 }

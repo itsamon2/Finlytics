@@ -277,7 +277,6 @@
     display: flex;
   }
 
-  /* Sidebar completely off-screen when closed on mobile */
   .sidebar {
     width: 280px;
     transform: translateX(-100%);
@@ -288,7 +287,6 @@
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
   }
 
-  /* Hide Finlytics text when closed (only toggle shows) */
   .sidebar:not(.open) .sidebar-logo h2 {
     opacity: 0;
   }
@@ -296,21 +294,47 @@
 
 /* ── Close button inside logo (mobile only) ── */
 .sidebar-close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: var(--text-secondary, #64748B);
+  background: rgba(45, 212, 191, 0.12);
+  border: 1.5px solid rgba(45, 212, 191, 0.45);
+  font-size: 20px;
+  color: var(--accent-color, #2DD4BF);
   cursor: pointer;
-  padding: 0 4px;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
-  transition: color 0.15s;
   flex-shrink: 0;
+  transition: all 0.2s ease;
+  box-shadow:
+    0 0 8px rgba(45, 212, 191, 0.40),
+    0 0 18px rgba(45, 212, 191, 0.18);
 }
 
 .sidebar-close-btn:hover {
+  background: rgba(45, 212, 191, 0.22);
+  border-color: rgba(45, 212, 191, 0.8);
+  box-shadow:
+    0 0 12px rgba(45, 212, 191, 0.60),
+    0 0 28px rgba(45, 212, 191, 0.28);
   color: var(--accent-color, #2DD4BF);
 }
 
 [data-theme="light"] .sidebar-close-btn {
-  color: #94A3B8;
+  background: rgba(13, 148, 136, 0.08);
+  border-color: rgba(13, 148, 136, 0.35);
+  color: #0D9488;
+  box-shadow:
+    0 0 8px rgba(13, 148, 136, 0.25),
+    0 0 18px rgba(13, 148, 136, 0.10);
+}
+
+[data-theme="light"] .sidebar-close-btn:hover {
+  background: rgba(13, 148, 136, 0.15);
+  box-shadow:
+    0 0 12px rgba(13, 148, 136, 0.40),
+    0 0 28px rgba(13, 148, 136, 0.18);
 }

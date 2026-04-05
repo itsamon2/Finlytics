@@ -7,20 +7,19 @@ import Goals from './Goals';
 import Alerts from './Alerts';
 import UserMenu from './UserMenu';
 import NotificationBell from './NotificationBell';
+import Loader from './Loader';
 import { transactionService } from '../service/api';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const { user }     = useAuth();
-  const navigate     = useNavigate();
+  const { user }    = useAuth();
+  const navigate    = useNavigate();
   const [timeRange, setTimeRange] = useState('7months');
 
-  // ── Live data state ────────────────────────────────────────────────────────
-  const [summary, setSummary]   = useState(null);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
 
-  // ── Fetch dashboard summary ────────────────────────────────────────────────
   const fetchSummary = () => {
     transactionService.getSummary()
       .then(data => { setSummary(data); setLoading(false); })
@@ -33,33 +32,28 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   const firstName = user?.name?.split(' ')[0] || 'there';
 
   const currentMonthYear = new Date().toLocaleString('default', {
     month: 'long', year: 'numeric',
   });
 
-  // Format trend — returns { label: '+2.5%', positive: true }
   const formatTrend = (value) => {
     if (value === null || value === undefined) return { label: '—', positive: true };
     const num = parseFloat(value);
     const positive = num >= 0;
-    return {
-      label: `${positive ? '+' : ''}${num.toFixed(1)}%`,
-      positive,
-    };
+    return { label: `${positive ? '+' : ''}${num.toFixed(1)}%`, positive };
   };
 
-  if (loading) return <div className="loading">Loading dashboard...</div>;
+  if (loading) return <Loader message="Loading dashboard..." />;
   if (error)   return <div className="error">Error: {error}</div>;
 
-  const incomeTrend   = formatTrend(summary?.incomeTrend);
-  const expenseTrend  = formatTrend(summary?.expenseTrend);
-  const balanceTrend  = formatTrend(summary?.balanceTrend);
-  const savingsRate   = parseFloat(summary?.savingsRate   || 0).toFixed(1);
-  const totalBalance  = parseFloat(summary?.totalBalance  || 0);
-  const monthlyIncome = parseFloat(summary?.monthlyIncome || 0);
+  const incomeTrend     = formatTrend(summary?.incomeTrend);
+  const expenseTrend    = formatTrend(summary?.expenseTrend);
+  const balanceTrend    = formatTrend(summary?.balanceTrend);
+  const savingsRate     = parseFloat(summary?.savingsRate     || 0).toFixed(1);
+  const totalBalance    = parseFloat(summary?.totalBalance    || 0);
+  const monthlyIncome   = parseFloat(summary?.monthlyIncome   || 0);
   const monthlyExpenses = parseFloat(summary?.monthlyExpenses || 0);
 
   return (
@@ -127,7 +121,6 @@ const Dashboard = () => {
             <span className="card-value">
               Ksh {monthlyExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
-            {/* For expenses, a positive trend (spending more) is bad */}
             <span className={`card-trend ${expenseTrend.positive ? 'negative' : 'positive'}`}>
               {expenseTrend.label}
             </span>
@@ -149,7 +142,6 @@ const Dashboard = () => {
       {/* ── Main grid ── */}
       <div className="dashboard-grid">
 
-        {/* Left column */}
         <div className="grid-column">
           <div className="chart-card">
             <div className="card-header">
@@ -181,7 +173,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Right column */}
         <div className="grid-column">
           <div className="chart-card">
             <div className="card-header">
@@ -207,7 +198,6 @@ const Dashboard = () => {
   );
 };
 
-// ── Greeting helper — outside component so it doesn't re-create on render ──
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return 'morning';

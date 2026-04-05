@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { transactionService } from '../service/api';
+import Loader from './Loader';
 
 const CashflowChart = ({ timeRange = '7months' }) => {
-  const [rawData, setRawData]   = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [rawData, setRawData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     transactionService.getCashflow()
@@ -12,7 +13,6 @@ const CashflowChart = ({ timeRange = '7months' }) => {
       .catch(() => setLoading(false));
   }, []);
 
-  // ── Filter by timeRange ──────────────────────────────────────────────────
   const data = useMemo(() => {
     const limit = timeRange === '12months' ? 12 : 7;
     return rawData.slice(-limit);
@@ -24,13 +24,11 @@ const CashflowChart = ({ timeRange = '7months' }) => {
   };
 
   const avgIncome   = data.length > 0
-    ? Math.round(data.reduce((sum, d) => sum + parseFloat(d.income   || 0), 0) / data.length)
-    : 0;
+    ? Math.round(data.reduce((sum, d) => sum + parseFloat(d.income   || 0), 0) / data.length) : 0;
   const avgExpenses = data.length > 0
-    ? Math.round(data.reduce((sum, d) => sum + parseFloat(d.expenses || 0), 0) / data.length)
-    : 0;
+    ? Math.round(data.reduce((sum, d) => sum + parseFloat(d.expenses || 0), 0) / data.length) : 0;
 
-  if (loading) return <div className="loading">Loading chart...</div>;
+  if (loading) return <Loader fullPage={false} message="Loading chart..." />;
 
   if (data.length === 0) return (
     <div className="no-data">No cashflow data yet.</div>
@@ -52,41 +50,23 @@ const CashflowChart = ({ timeRange = '7months' }) => {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-            <XAxis
-              dataKey="month"
-              stroke="var(--text-tertiary)"
-              tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }}
-            />
-            <YAxis
-              tickFormatter={formatYAxis}
-              stroke="var(--text-tertiary)"
-              tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }}
-            />
+            <XAxis dataKey="month" stroke="var(--text-tertiary)"
+              tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} />
+            <YAxis tickFormatter={formatYAxis} stroke="var(--text-tertiary)"
+              tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} />
             <Tooltip
               formatter={(value) => [`Ksh ${parseFloat(value).toLocaleString()}`, '']}
               contentStyle={{
-                background:   'var(--bg-card)',
-                border:       '1px solid var(--border-color)',
-                borderRadius: '8px',
-                color:        'var(--text-primary)',
+                background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                borderRadius: '8px', color: 'var(--text-primary)',
               }}
             />
-            <Area
-              type="monotone"
-              dataKey="income"
-              stroke="var(--accent-color)"
-              strokeWidth={2}
-              fill="url(#incomeGradient)"
-              dot={{ fill: 'var(--accent-color)', r: 4 }}
-            />
-            <Area
-              type="monotone"
-              dataKey="expenses"
-              stroke="var(--danger-color)"
-              strokeWidth={2}
-              fill="url(#expensesGradient)"
-              dot={{ fill: 'var(--danger-color)', r: 4 }}
-            />
+            <Area type="monotone" dataKey="income" stroke="var(--accent-color)"
+              strokeWidth={2} fill="url(#incomeGradient)"
+              dot={{ fill: 'var(--accent-color)', r: 4 }} />
+            <Area type="monotone" dataKey="expenses" stroke="var(--danger-color)"
+              strokeWidth={2} fill="url(#expensesGradient)"
+              dot={{ fill: 'var(--danger-color)', r: 4 }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>

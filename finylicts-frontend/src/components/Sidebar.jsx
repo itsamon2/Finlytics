@@ -20,6 +20,17 @@ const Sidebar = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Add/remove a body class so the header can hide its controls via CSS
+  useEffect(() => {
+    if (isMobile && isOpen) {
+      document.body.classList.add('sidebar-is-open');
+    } else {
+      document.body.classList.remove('sidebar-is-open');
+    }
+    // Clean up on unmount
+    return () => document.body.classList.remove('sidebar-is-open');
+  }, [isMobile, isOpen]);
+
   const menuSections = [
     {
       title: 'MAIN',

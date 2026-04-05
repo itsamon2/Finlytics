@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { transactionService } from '../service/api';
+import Loader from './Loader';
 
 const COLORS = [
   'var(--accent-color)', 'var(--warning-color)', '#3B82F6',
@@ -10,7 +11,7 @@ const COLORS = [
 const RADIAN = Math.PI / 180;
 
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-  if (percent < 0.05) return null; // skip tiny slices
+  if (percent < 0.05) return null;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -32,10 +33,10 @@ const ExpenseBreakdown = () => {
         const mapped = Object.entries(categoryMap)
           .map(([name, value], index) => ({
             name,
-            value:  parseFloat(value),
-            color:  COLORS[index % COLORS.length],
+            value: parseFloat(value),
+            color: COLORS[index % COLORS.length],
           }))
-          .sort((a, b) => b.value - a.value); // largest slice first
+          .sort((a, b) => b.value - a.value);
         setData(mapped);
         setLoading(false);
       })
@@ -44,7 +45,7 @@ const ExpenseBreakdown = () => {
 
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
-  if (loading) return <div className="loading">Loading breakdown...</div>;
+  if (loading) return <Loader fullPage={false} message="Loading breakdown..." />;
 
   if (data.length === 0) return (
     <div className="no-data">No expenses this month yet.</div>
@@ -55,31 +56,18 @@ const ExpenseBreakdown = () => {
       <div className="chart-container">
         <ResponsiveContainer width="100%" height={250}>
           <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              label={renderCustomizedLabel}
-              outerRadius={80}
-              dataKey="value"
-            >
+            <Pie data={data} cx="50%" cy="50%" labelLine={false}
+              label={renderCustomizedLabel} outerRadius={80} dataKey="value">
               {data.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={entry.color}
-                  stroke="var(--bg-card)"
-                  strokeWidth={2}
-                />
+                <Cell key={`cell-${index}`} fill={entry.color}
+                  stroke="var(--bg-card)" strokeWidth={2} />
               ))}
             </Pie>
             <Tooltip
               formatter={(value) => [`Ksh ${parseFloat(value).toLocaleString()}`, 'Amount']}
               contentStyle={{
-                background:   'var(--bg-card)',
-                border:       '1px solid var(--border-color)',
-                borderRadius: '8px',
-                color:        'var(--text-primary)',
+                background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                borderRadius: '8px', color: 'var(--text-primary)',
               }}
             />
           </PieChart>

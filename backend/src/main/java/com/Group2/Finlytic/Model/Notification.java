@@ -33,8 +33,9 @@ public class Notification {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    // Optional — links notification back to the goal or budget it came from
-    // so clicking it can navigate the user to the right place
     @Column(name = "reference_id")
     private Long referenceId;
+
+    @Column(name = "user_id")
+    private Long userId;
 }
