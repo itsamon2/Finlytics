@@ -616,3 +616,16 @@
   transform: scale(1.05);
   box-shadow: 0 4px 12px var(--accent-soft);
 }
+
+/* ── Hide header controls when mobile sidebar is open ── */
+@media (max-width: 768px) {
+  body.sidebar-is-open .header-right {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .header-right {
+    transition: opacity 0.2s ease;
+  }
+}
