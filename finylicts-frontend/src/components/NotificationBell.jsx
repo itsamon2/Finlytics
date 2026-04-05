@@ -2,24 +2,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { notificationService } from '../service/api';
+import Loader from './Loader';
 import './NotificationIcon.css';
 
 const NotificationBell = () => {
-  const navigate = useNavigate();
+  const navigate                              = useNavigate();
   const [showDropdown, setShowDropdown]       = useState(false);
   const [notifications, setNotifications]     = useState([]);
-  const [unreadCount, setUnreadCount]         = useState(0);
-  const [loading, setLoading]                 = useState(false);
+  const [unreadCount,   setUnreadCount]       = useState(0);
+  const [loading,       setLoading]           = useState(false);
   const dropdownRef                           = useRef(null);
 
-  // ── Fetch unread count only (lightweight — runs every 60s) ────────────────
   const fetchUnreadCount = () => {
     notificationService.getUnreadCount()
       .then(data => setUnreadCount(data.count))
       .catch(() => {});
   };
 
-  // ── Fetch latest 5 notifications (runs when bell is clicked) ─────────────
   const fetchLatest = () => {
     setLoading(true);
     notificationService.getLatest()
@@ -31,14 +30,12 @@ const NotificationBell = () => {
       .finally(() => setLoading(false));
   };
 
-  // ── On mount — fetch count, then poll every 60s ───────────────────────────
   useEffect(() => {
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // ── Close dropdown when clicking outside ──────────────────────────────────
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -49,7 +46,6 @@ const NotificationBell = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ── Bell click — open dropdown and load latest ────────────────────────────
   const handleBellClick = (e) => {
     e.stopPropagation();
     const opening = !showDropdown;
@@ -57,7 +53,6 @@ const NotificationBell = () => {
     if (opening) fetchLatest();
   };
 
-  // ── Mark single as read ───────────────────────────────────────────────────
   const handleMarkAsRead = (e, id) => {
     e.stopPropagation();
     notificationService.markAsRead(id)
@@ -70,7 +65,6 @@ const NotificationBell = () => {
       .catch(() => {});
   };
 
-  // ── Mark all as read ──────────────────────────────────────────────────────
   const handleMarkAllAsRead = (e) => {
     e.stopPropagation();
     notificationService.markAllAsRead()
@@ -81,44 +75,36 @@ const NotificationBell = () => {
       .catch(() => {});
   };
 
-  // ── View all → navigate to notifications page ─────────────────────────────
   const handleViewAll = () => {
     navigate('/notifications');
     setShowDropdown(false);
   };
 
-  // ── Notification type → icon ──────────────────────────────────────────────
   const getTypeIcon = (type) => {
     switch (type) {
-      case 'CONTRIBUTION':   return '🔔';
+      case 'CONTRIBUTION':    return '🔔';
       case 'BUDGET_EXCEEDED': return '⚠️';
-      case 'GOAL_MILESTONE': return '🎯';
-      default:               return '📢';
+      case 'GOAL_MILESTONE':  return '🎯';
+      default:                return '📢';
     }
   };
 
-  // ── Format createdAt timestamp ────────────────────────────────────────────
   const formatTime = (createdAt) => {
     if (!createdAt) return '';
-    const diff = Date.now() - new Date(createdAt).getTime();
+    const diff  = Date.now() - new Date(createdAt).getTime();
     const mins  = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days  = Math.floor(diff / 86400000);
-    if (mins < 1)    return 'Just now';
-    if (mins < 60)   return `${mins}m ago`;
-    if (hours < 24)  return `${hours}h ago`;
+    if (mins < 1)   return 'Just now';
+    if (mins < 60)  return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
     return `${days}d ago`;
   };
 
   return (
     <div className="notification-container" ref={dropdownRef}>
 
-      {/* ── Bell button ── */}
-      <button
-        className="notification-bell"
-        onClick={handleBellClick}
-        aria-label="Notifications"
-      >
+      <button className="notification-bell" onClick={handleBellClick} aria-label="Notifications">
         <svg className="bell-icon" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" strokeWidth="2">
           <path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214
@@ -135,18 +121,13 @@ const NotificationBell = () => {
         )}
       </button>
 
-      {/* ── Dropdown ── */}
       <AnimatePresence>
         {showDropdown && (
           <>
-            <motion.div
-              className="notification-dropdown"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              {/* Header */}
+            <motion.div className="notification-dropdown"
+              initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+
               <div className="notification-header">
                 <h3>Notifications</h3>
                 {unreadCount > 0 && (
@@ -156,53 +137,39 @@ const NotificationBell = () => {
                 )}
               </div>
 
-              {/* List */}
               <div className="notification-list">
                 {loading ? (
-                  <div className="notification-empty">Loading...</div>
+                  <Loader fullPage={false} message="Loading notifications..." />
                 ) : notifications.length === 0 ? (
                   <div className="notification-empty">No notifications yet 🎉</div>
                 ) : (
                   notifications.map(notif => (
-                    <div
-                      key={notif.notificationId}
-                      className={`notification-item ${notif.type?.toLowerCase()} ${!notif.read ? 'unread' : ''}`}
-                    >
+                    <div key={notif.notificationId}
+                      className={`notification-item ${notif.type?.toLowerCase()} ${!notif.read ? 'unread' : ''}`}>
                       <div className="notification-content">
                         <div className="notification-item-header">
-                          <span className="notification-type-icon">
-                            {getTypeIcon(notif.type)}
-                          </span>
+                          <span className="notification-type-icon">{getTypeIcon(notif.type)}</span>
                           <span className="notification-title">{notif.title}</span>
                           {!notif.read && (
-                            <button
-                              className="mark-read-dot"
+                            <button className="mark-read-dot"
                               onClick={(e) => handleMarkAsRead(e, notif.notificationId)}
-                              title="Mark as read"
-                            />
+                              title="Mark as read" />
                           )}
                         </div>
                         <span className="notification-message">{notif.message}</span>
-                        <span className="notification-time">
-                          {formatTime(notif.createdAt)}
-                        </span>
+                        <span className="notification-time">{formatTime(notif.createdAt)}</span>
                       </div>
                     </div>
                   ))
                 )}
               </div>
 
-              {/* Footer */}
               <div className="notification-footer">
                 <button onClick={handleViewAll}>View All Notifications</button>
               </div>
             </motion.div>
 
-            {/* Overlay to close on outside click */}
-            <div
-              className="notification-overlay"
-              onClick={() => setShowDropdown(false)}
-            />
+            <div className="notification-overlay" onClick={() => setShowDropdown(false)} />
           </>
         )}
       </AnimatePresence>

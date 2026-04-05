@@ -1,21 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Loader from '../components/Loader';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-/**
- * Spring Boot's OAuth2SuccessHandler redirects here as:
- *   /auth/callback?token=<jwt>
- *
- * We fetch the user profile with that token, then store both
- * via loginWithToken() from AuthContext.
- */
 export default function OAuthCallback() {
-  const [searchParams] = useSearchParams();
+  const [searchParams]     = useSearchParams();
   const { loginWithToken } = useAuth();
-  const navigate = useNavigate();
-  const handled = useRef(false); // guard against StrictMode double-fire
+  const navigate           = useNavigate();
+  const handled            = useRef(false);
 
   useEffect(() => {
     if (handled.current) return;
@@ -29,7 +23,6 @@ export default function OAuthCallback() {
       return;
     }
 
-    // Fetch user profile using the new token
     fetch(`${BASE_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -38,7 +31,6 @@ export default function OAuthCallback() {
         return res.json();
       })
       .then((userInfo) => {
-        // userInfo = { email, name, role, photo }
         loginWithToken(token, userInfo);
         navigate('/dashboard', { replace: true });
       })
@@ -47,9 +39,5 @@ export default function OAuthCallback() {
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return (
-    <div style={{ display: 'grid', placeItems: 'center', height: '100vh' }}>
-      <p>Signing you in…</p>
-    </div>
-  );
+  return <Loader message="Signing you in…" />;
 }
