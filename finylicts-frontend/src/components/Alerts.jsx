@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notificationService } from '../service/api';
+import Loader from './Loader';
 
 const typeConfig = {
   CONTRIBUTION:    { icon: '🔔', className: 'info'    },
@@ -19,7 +20,7 @@ const Alerts = () => {
       .catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="loading">Loading alerts...</div>;
+  if (loading) return <Loader fullPage={false} message="Loading alerts..." />;
 
   if (alerts.length === 0) return (
     <div className="no-data" style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
