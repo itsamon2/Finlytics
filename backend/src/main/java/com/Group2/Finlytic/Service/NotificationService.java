@@ -26,97 +26,84 @@ public class NotificationService {
     @Autowired
     private GoalsService goalsService;
 
-    // ── CRUD ────────────────────────────────────────────────────────────────
+    // ── CRUD ─────────────────────────────────────────────────────────────────
 
-    // Get all notifications newest first (for NotificationsPage)
-    public List<Notification> getAllNotifications() {
-        return notificationRepo.findAllByOrderByCreatedAtDesc();
+    public List<Notification> getAllNotifications(Long userId) {
+        return notificationRepo.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
-    // Get latest 5 for the bell dropdown
-    public List<Notification> getLatestNotifications() {
-        return notificationRepo.findTop5ByOrderByCreatedAtDesc();
+    public List<Notification> getLatestNotifications(Long userId) {
+        return notificationRepo.findTop5ByUserIdOrderByCreatedAtDesc(userId);
     }
 
-    // Unread count for the badge
-    public long getUnreadCount() {
-        return notificationRepo.countByReadFalse();
+    public long getUnreadCount(Long userId) {
+        return notificationRepo.countByUserIdAndReadFalse(userId);
     }
 
-    // Mark a single notification as read
-    public void markAsRead(Long notificationId) {
+    public void markAsRead(Long notificationId, Long userId) {
         notificationRepo.findById(notificationId).ifPresent(n -> {
-            n.setRead(true);
-            notificationRepo.save(n);
+            if (n.getUserId().equals(userId)) {
+                n.setRead(true);
+                notificationRepo.save(n);
+            }
         });
     }
 
-    // Mark all notifications as read
-    public void markAllAsRead() {
-        List<Notification> unread = notificationRepo.findAllByOrderByCreatedAtDesc()
-                .stream()
-                .filter(n -> !n.isRead())
-                .toList();
+    public void markAllAsRead(Long userId) {
+        List<Notification> unread = notificationRepo.findByUserIdAndReadFalse(userId);
         unread.forEach(n -> n.setRead(true));
         notificationRepo.saveAll(unread);
     }
 
-    // ── Internal create helper ───────────────────────────────────────────────
+    // ── Internal create helper ────────────────────────────────────────────────
     private void createIfNotExists(String title, String message,
-                                   NotificationType type, Long referenceId) {
-        // Avoid duplicate notifications for the same event
-        if (!notificationRepo.existsByReferenceIdAndType(referenceId, type)) {
+                                   NotificationType type, Long referenceId, Long userId) {
+        if (!notificationRepo.existsByUserIdAndReferenceIdAndType(userId, referenceId, type)) {
             Notification n = new Notification();
             n.setTitle(title);
             n.setMessage(message);
             n.setType(type);
             n.setReferenceId(referenceId);
+            n.setUserId(userId);
             notificationRepo.save(n);
         }
     }
 
-    // ── Notification generators ──────────────────────────────────────────────
+    // ── Notification generators ───────────────────────────────────────────────
 
-    // Called when a contribution is due for a goal
-    public void generateContributionNotification(Goals goal) {
+    public void generateContributionNotification(Goals goal, Long userId) {
         String title   = "Contribution Due 🔔";
         String message = "Time to contribute Ksh "
                 + goal.getContributionAmount().toPlainString()
                 + " towards " + goal.getGoalName();
-        // Use a composite key concept — we clear this when contribution is recorded
-        // so we store referenceId as goalId, type as CONTRIBUTION
-        createIfNotExists(title, message, NotificationType.CONTRIBUTION, goal.getGoalId());
+        createIfNotExists(title, message, NotificationType.CONTRIBUTION, goal.getGoalId(), userId);
     }
 
-    // Called when a budget is exceeded
-    public void generateBudgetExceededNotification(Long budgetId, String category) {
+    public void generateBudgetExceededNotification(Long budgetId, String category, Long userId) {
         String title   = "Budget Exceeded ⚠️";
         String message = "Your " + category + " budget has been exceeded this month.";
-        createIfNotExists(title, message, NotificationType.BUDGET_EXCEEDED, budgetId);
+        createIfNotExists(title, message, NotificationType.BUDGET_EXCEEDED, budgetId, userId);
     }
 
-    // Called when a goal hits a milestone — 25, 50, 75, 100%
-    public void generateGoalMilestoneNotification(Goals goal, int milestone) {
-        String emoji = milestone == 100 ? "🏆" : "🎯";
-        String title = "Goal Milestone " + emoji;
+    public void generateGoalMilestoneNotification(Goals goal, int milestone, Long userId) {
+        String emoji   = milestone == 100 ? "🏆" : "🎯";
+        String title   = "Goal Milestone " + emoji;
         String message = goal.getGoalName() + " is " + milestone + "% complete!";
-        // Use referenceId as goalId * 100 + milestone to make it unique per milestone
         Long uniqueRef = goal.getGoalId() * 100L + milestone;
-        createIfNotExists(title, message, NotificationType.GOAL_MILESTONE, uniqueRef);
+        createIfNotExists(title, message, NotificationType.GOAL_MILESTONE, uniqueRef, userId);
     }
 
-    // ── Master check — call this on page load ────────────────────────────────
-    // Scans all goals and budgets and generates any missing notifications
-    public void runNotificationCheck() {
+    // ── Master check — scoped to a specific user ──────────────────────────────
+    public void runNotificationCheck(Long userId) {
         // ── Goals ──
-        goalsRepo.findAll().forEach(goal -> {
+        goalsRepo.findByUserId(userId).forEach(goal -> {
             if (goal.getStatus() == null) return;
 
             // Contribution due
             if ("ACTIVE".equals(goal.getStatus().name())) {
                 var nextDate = goalsService.getNextContributionDate(goal);
                 if (nextDate != null && !nextDate.isAfter(java.time.LocalDate.now())) {
-                    generateContributionNotification(goal);
+                    generateContributionNotification(goal, userId);
                 }
             }
 
@@ -131,17 +118,18 @@ public class NotificationService {
 
                 for (int milestone : new int[]{25, 50, 75, 100}) {
                     if (progress >= milestone) {
-                        generateGoalMilestoneNotification(goal, milestone);
+                        generateGoalMilestoneNotification(goal, milestone, userId);
                     }
                 }
             }
         });
 
         // ── Budgets ──
-        budgetManagerRepo.findAll().forEach(budget -> {
+        budgetManagerRepo.findByUserId(userId).forEach(budget -> {
             if (budget.getAmountSpent() != null && budget.getBudgetLimit() != null
                     && budget.getAmountSpent().compareTo(budget.getBudgetLimit()) > 0) {
-                generateBudgetExceededNotification(budget.getBudgetId(), budget.getCategory());
+                generateBudgetExceededNotification(
+                        budget.getBudgetId(), budget.getCategory(), userId);
             }
         });
     }

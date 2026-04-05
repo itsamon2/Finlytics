@@ -134,3 +134,10 @@ export const notificationService = {
   // Mark all as read
   markAllAsRead: () => request('/notifications/read-all', { method: 'PATCH' }),
 };
+
+export const userService = {
+    getProfile:      ()       => request('/user/profile'),
+    updateProfile:   (data)   => request('/user/profile',          { method: 'PUT',    body: data }),
+    changePassword:  (data)   => request('/user/change-password',  { method: 'PUT',    body: data }),
+    deleteAccount:   ()       => request('/user/account',          { method: 'DELETE' }),
+};
