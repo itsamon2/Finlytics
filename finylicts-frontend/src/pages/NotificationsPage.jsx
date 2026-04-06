@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { notificationService } from '../service/api';
+import Loader from '../components/Loader';
 import './NotificationsPage.css';
 
 const NotificationsPage = () => {
@@ -8,38 +9,26 @@ const NotificationsPage = () => {
   const [error, setError]                 = useState(null);
   const [filter, setFilter]               = useState('ALL');
 
-  // ── Fetch all notifications on load ───────────────────────────────────────
   const fetchNotifications = () => {
     notificationService.getAll()
       .then(data => { setNotifications(data); setLoading(false); })
       .catch(err  => { setError(err.message); setLoading(false); });
   };
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
+  useEffect(() => { fetchNotifications(); }, []);
 
-  // ── Mark single as read ───────────────────────────────────────────────────
   const handleMarkAsRead = (id) => {
     notificationService.markAsRead(id)
-      .then(() => {
-        setNotifications(prev =>
-          prev.map(n => n.notificationId === id ? { ...n, read: true } : n)
-        );
-      })
+      .then(() => setNotifications(prev => prev.map(n => n.notificationId === id ? { ...n, read: true } : n)))
       .catch(() => {});
   };
 
-  // ── Mark all as read ──────────────────────────────────────────────────────
   const handleMarkAllAsRead = () => {
     notificationService.markAllAsRead()
-      .then(() => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      })
+      .then(() => setNotifications(prev => prev.map(n => ({ ...n, read: true }))))
       .catch(() => {});
   };
 
-  // ── Filter ────────────────────────────────────────────────────────────────
   const filteredNotifications = notifications.filter(n => {
     if (filter === 'ALL')    return true;
     if (filter === 'UNREAD') return !n.read;
@@ -48,26 +37,9 @@ const NotificationsPage = () => {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // ── Type → icon + label ───────────────────────────────────────────────────
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'CONTRIBUTION':    return '🔔';
-      case 'BUDGET_EXCEEDED': return '⚠️';
-      case 'GOAL_MILESTONE':  return '🎯';
-      default:                return '📢';
-    }
-  };
+  const getTypeIcon  = (type) => ({ CONTRIBUTION:'🔔', BUDGET_EXCEEDED:'⚠️', GOAL_MILESTONE:'🎯' }[type] || '📢');
+  const getTypeLabel = (type) => ({ CONTRIBUTION:'Contribution', BUDGET_EXCEEDED:'Budget', GOAL_MILESTONE:'Milestone' }[type] || 'General');
 
-  const getTypeLabel = (type) => {
-    switch (type) {
-      case 'CONTRIBUTION':    return 'Contribution';
-      case 'BUDGET_EXCEEDED': return 'Budget';
-      case 'GOAL_MILESTONE':  return 'Milestone';
-      default:                return 'General';
-    }
-  };
-
-  // ── Format timestamp ──────────────────────────────────────────────────────
   const formatTime = (createdAt) => {
     if (!createdAt) return '';
     const diff  = Date.now() - new Date(createdAt).getTime();
@@ -80,93 +52,65 @@ const NotificationsPage = () => {
     return `${days} days ago`;
   };
 
-  if (loading) return <div className="loading">Loading notifications...</div>;
+  if (loading) return <Loader fullPage={false} message="Loading notifications..." />;
   if (error)   return <div className="error">Error: {error}</div>;
 
   return (
     <div className="notifications-page">
-
-      {/* ── Header ── */}
       <div className="notifications-header">
         <div>
           <h1>Notifications</h1>
           <p className="header-subtitle">
-            {unreadCount > 0
-              ? `You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}`
-              : 'All caught up!'}
+            {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'All caught up!'}
           </p>
         </div>
         {unreadCount > 0 && (
-          <button className="mark-read-btn" onClick={handleMarkAllAsRead}>
-            Mark all as read
-          </button>
+          <button className="mark-read-btn" onClick={handleMarkAllAsRead}>Mark all as read</button>
         )}
       </div>
 
-      {/* ── Filter tabs ── */}
       <div className="notification-filters">
         {['ALL', 'UNREAD', 'CONTRIBUTION', 'BUDGET_EXCEEDED', 'GOAL_MILESTONE'].map(f => (
-          <button
-            key={f}
-            className={`filter-tab ${filter === f ? 'active' : ''}`}
-            onClick={() => setFilter(f)}
-          >
-            {f === 'ALL'            && '📋 All'}
-            {f === 'UNREAD'         && `🔵 Unread ${unreadCount > 0 ? `(${unreadCount})` : ''}`}
-            {f === 'CONTRIBUTION'   && '🔔 Contributions'}
-            {f === 'BUDGET_EXCEEDED'&& '⚠️ Budgets'}
-            {f === 'GOAL_MILESTONE' && '🎯 Milestones'}
+          <button key={f} className={`filter-tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
+            {f === 'ALL'             && '📋 All'}
+            {f === 'UNREAD'          && `🔵 Unread ${unreadCount > 0 ? `(${unreadCount})` : ''}`}
+            {f === 'CONTRIBUTION'    && '🔔 Contributions'}
+            {f === 'BUDGET_EXCEEDED' && '⚠️ Budgets'}
+            {f === 'GOAL_MILESTONE'  && '🎯 Milestones'}
           </button>
         ))}
       </div>
 
-      {/* ── Empty state ── */}
       {filteredNotifications.length === 0 && (
         <div className="no-notifications">
           <p>No {filter === 'ALL' ? '' : filter.toLowerCase()} notifications yet 🎉</p>
         </div>
       )}
 
-      {/* ── Notifications list ── */}
       <div className="notifications-list">
         {filteredNotifications.map(notif => (
-          <div
-            key={notif.notificationId}
-            className={`notification-card ${notif.type?.toLowerCase()} ${!notif.read ? 'unread' : ''}`}
-          >
+          <div key={notif.notificationId}
+            className={`notification-card ${notif.type?.toLowerCase()} ${!notif.read ? 'unread' : ''}`}>
             <div className="notification-card-content">
               <div className="notification-card-header">
                 <div className="notification-card-title">
-                  <span className="notification-type-icon">
-                    {getTypeIcon(notif.type)}
-                  </span>
+                  <span className="notification-type-icon">{getTypeIcon(notif.type)}</span>
                   <h3>{notif.title}</h3>
-                  <span className={`type-badge ${notif.type?.toLowerCase()}`}>
-                    {getTypeLabel(notif.type)}
-                  </span>
+                  <span className={`type-badge ${notif.type?.toLowerCase()}`}>{getTypeLabel(notif.type)}</span>
                 </div>
                 <span className="notification-time">{formatTime(notif.createdAt)}</span>
               </div>
               <p className="notification-message">{notif.message}</p>
             </div>
-
-            {/* Mark as read button — only shown if unread */}
             {!notif.read && (
               <div className="notification-card-actions">
-                <button
-                  className="mark-single-read-btn"
-                  onClick={() => handleMarkAsRead(notif.notificationId)}
-                >
-                  Mark as read
-                </button>
+                <button className="mark-single-read-btn" onClick={() => handleMarkAsRead(notif.notificationId)}>Mark as read</button>
               </div>
             )}
-
             {!notif.read && <span className="unread-dot"></span>}
           </div>
         ))}
       </div>
-
     </div>
   );
 };
