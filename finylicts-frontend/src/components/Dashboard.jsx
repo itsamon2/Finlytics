@@ -45,7 +45,7 @@ const Dashboard = () => {
     return { label: `${positive ? '+' : ''}${num.toFixed(1)}%`, positive };
   };
 
-  if (loading) return <Loader message="Loading dashboard..." />;
+  if (loading) return <Loader fullPage={false} message="Loading dashboard..." />;
   if (error)   return <div className="error">Error: {error}</div>;
 
   const incomeTrend     = formatTrend(summary?.incomeTrend);
