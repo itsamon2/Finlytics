@@ -15,19 +15,20 @@ public class IncomeProfileService {
     private IncomeProfileRepo incomeProfileRepo;
 
     public IncomeProfile addIncome(IncomeProfile incomeProfile, Long userId) {
-        incomeProfile.setUserId(userId);          // ✅ scope to user
+        incomeProfile.setUserId(userId);
         incomeProfile.setCreatedDate(LocalDate.now());
         incomeProfile.setUpdatedDate(LocalDate.now());
-        return incomeProfileRepo.save(incomeProfile);  // ✅ single save, not double
+        return incomeProfileRepo.save(incomeProfile);
     }
 
     public IncomeProfile updateIncome(IncomeProfile incomeProfile, Long userId) {
-        incomeProfile.setUserId(userId);          // ✅ prevent user from changing ownership
+        incomeProfile.setUserId(userId);
         incomeProfile.setUpdatedDate(LocalDate.now());
         return incomeProfileRepo.save(incomeProfile);
     }
 
     public Optional<IncomeProfile> getIncomeProfile(Long userId) {
-        return incomeProfileRepo.findByUserId(userId);  // ✅ useful to add
+
+        return incomeProfileRepo.findByUserId(userId);
     }
 }

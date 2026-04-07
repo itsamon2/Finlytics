@@ -38,7 +38,7 @@ public class GoalsService {
     }
 
     public List<Goals> getAllGoalsByUserId(Long userId) {
-        return goalsRepo.findByUserId(userId);  // ✅
+        return goalsRepo.findByUserId(userId);
     }
 
     public Goals getGoalsById(Long goalId) {
@@ -56,7 +56,7 @@ public class GoalsService {
     }
 
     public void deleteGoal(Long goalId, Long userId) {
-        goalsRepo.findByGoalIdAndUserId(goalId, userId)  // ✅ verify ownership before delete
+        goalsRepo.findByGoalIdAndUserId(goalId, userId)
                 .ifPresent(goal -> goalsRepo.deleteById(goalId));
     }
 
