@@ -141,3 +141,13 @@ export const userService = {
     changePassword:  (data)   => request('/user/change-password',  { method: 'PUT',    body: data }),
     deleteAccount:   ()       => request('/user/account',          { method: 'DELETE' }),
 };
+export const healthService = {
+  getMetrics: () => request('/health'),
+  getTaxSummary: () => request('/health/tax'),
+};
+
+export const incomeProfileService = {
+  get:    ()      => request('/income'),
+  create: (data)  => request('/income', { method: 'POST', body: data }),
+  update: (data)  => request('/income', { method: 'PUT',  body: data }),
+};
