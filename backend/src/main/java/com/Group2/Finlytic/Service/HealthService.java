@@ -17,7 +17,7 @@ import java.util.Optional;
 public class HealthService {
 
     private final GoalsRepo goalsRepo;
-    private final IncomeProfileRepo  incomeProfileRepo;
+    private final IncomeProfileRepo incomeProfileRepo;
 
     public HealthService(GoalsRepo goalsRepo, IncomeProfileRepo incomeProfileRepo) {
         this.goalsRepo = goalsRepo;
@@ -29,7 +29,7 @@ public class HealthService {
         List<Goals> goals = goalsRepo.findByUserIdAndGoalType(userId, "SAVINGS");
 
         if (goals == null || goals.isEmpty()) {
-            throw new RuntimeException("No goals found for user");
+            return 0;
         }
 
         BigDecimal totalSaved = BigDecimal.ZERO;
@@ -38,10 +38,10 @@ public class HealthService {
                 totalSaved = totalSaved.add(g.getSavedAmount());
             }
         }
-        Optional<IncomeProfile> incomeProfile = incomeProfileRepo.findByUserId(userId);
 
+        Optional<IncomeProfile> incomeProfile = incomeProfileRepo.findByUserId(userId);
         if (incomeProfile.isEmpty()) {
-            throw new RuntimeException("Income profile not found");
+            return 0;
         }
 
         BigDecimal totalIncome = incomeProfile.get().getDeclaredMonthlyIncome();
@@ -106,14 +106,14 @@ public class HealthService {
         return totalMonthlyDebt;
     }
 
-    //Calculate Debt to Income percentage
     public int calculateDTI(Long userId) {
 
         BigDecimal monthlyDebt = getMonthlyDebt(userId);
 
-        BigDecimal income = incomeProfileRepo.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Income not found"))
-                .getDeclaredMonthlyIncome();
+        Optional<IncomeProfile> incomeOpt = incomeProfileRepo.findByUserId(userId);
+        if (incomeOpt.isEmpty()) return 0;
+
+        BigDecimal income = incomeOpt.get().getDeclaredMonthlyIncome();
 
         if (income.compareTo(BigDecimal.ZERO) == 0) {
             return 0;
@@ -125,8 +125,9 @@ public class HealthService {
 
         return dti.intValue();
     }
+
     public int calculateEmergencyFundCoverage(Long userId) {
-        // Get all EMERGENCY_FUND type goals
+
         List<Goals> emergencyGoals = goalsRepo.findByUserIdAndGoalType(userId, "EMERGENCY_FUND");
 
         if (emergencyGoals == null || emergencyGoals.isEmpty()) {
@@ -188,17 +189,14 @@ public class HealthService {
 
     public Map<String, Object> calculateFinancialHealthScore(Long userId) {
 
-        int savingsRate     = calculateSavingsRate(userId);
-        int dti             = calculateDTI(userId);
-        int emergencyFund   = calculateEmergencyFundCoverage(userId);
+        int savingsRate         = calculateSavingsRate(userId);
+        int dti                 = calculateDTI(userId);
+        int emergencyFund       = calculateEmergencyFundCoverage(userId);
         BigDecimal investmentGrowth = calculateInvestmentGrowth(userId);
 
-        int savingsScore = Math.min((savingsRate * 100) / 50, 100);
-
-        int dtiScore = Math.max(0, 100 - (dti * 100 / 36));
-
-        int emergencyScore = Math.min(emergencyFund, 100);
-
+        int savingsScore    = Math.min((savingsRate * 100) / 50, 100);
+        int dtiScore        = Math.max(0, 100 - (dti * 100 / 36));
+        int emergencyScore  = Math.min(emergencyFund, 100);
         int investmentScore = Math.min(
                 investmentGrowth.multiply(BigDecimal.valueOf(10)).intValue(), 100
         );
@@ -227,5 +225,4 @@ public class HealthService {
                 )
         );
     }
-
 }

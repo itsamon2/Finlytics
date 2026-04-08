@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class TaxService {
@@ -19,9 +20,17 @@ public class TaxService {
 
     public Map<String, BigDecimal> calculateTax(Long userId) {
 
-        IncomeProfile profile = incomeProfileRepo.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Income profile not found"));
+        Optional<IncomeProfile> profileOpt = incomeProfileRepo.findByUserId(userId);
+        if (profileOpt.isEmpty()) {
+            return Map.of(
+                    "grossIncome",      BigDecimal.ZERO,
+                    "totalDeductions",  BigDecimal.ZERO,
+                    "estimatedTax",     BigDecimal.ZERO,
+                    "afterTax",         BigDecimal.ZERO
+            );
+        }
 
+        IncomeProfile profile = profileOpt.get();
         BigDecimal monthlyIncome = profile.getDeclaredMonthlyIncome();
         BigDecimal annualIncome = monthlyIncome.multiply(BigDecimal.valueOf(12));
 
