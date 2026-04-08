@@ -25,33 +25,46 @@ public class HealthService {
     }
 
     public int calculateSavingsRate(Long userId) {
-
         List<Goals> goals = goalsRepo.findByUserIdAndGoalType(userId, "SAVINGS");
 
-        if (goals == null || goals.isEmpty()) {
-            return 0;
-        }
+        if (goals == null || goals.isEmpty()) return 0;
 
-        BigDecimal totalSaved = BigDecimal.ZERO;
+        BigDecimal totalMonthlyContribution = BigDecimal.ZERO;
+
         for (Goals g : goals) {
-            if (g.getSavedAmount() != null) {
-                totalSaved = totalSaved.add(g.getSavedAmount());
+            if (g.getContributionAmount() == null || g.getContributionFrequencyUnit() == null
+                    || g.getContributionFrequencyValue() == null || g.getContributionFrequencyValue() == 0) continue;
+
+            BigDecimal amount = g.getContributionAmount();
+            int freqValue = g.getContributionFrequencyValue();
+
+            switch (g.getContributionFrequencyUnit()) {
+                case DAYS:
+                    totalMonthlyContribution = totalMonthlyContribution.add(
+                            amount.multiply(BigDecimal.valueOf(30)
+                                    .divide(BigDecimal.valueOf(freqValue), 2, RoundingMode.HALF_UP)));
+                    break;
+                case MONTHS:
+                    totalMonthlyContribution = totalMonthlyContribution.add(
+                            amount.divide(BigDecimal.valueOf(freqValue), 2, RoundingMode.HALF_UP));
+                    break;
+                case YEARS:
+                    totalMonthlyContribution = totalMonthlyContribution.add(
+                            amount.divide(BigDecimal.valueOf(freqValue * 12), 2, RoundingMode.HALF_UP));
+                    break;
+                default:
+                    continue;
             }
         }
 
         Optional<IncomeProfile> incomeProfile = incomeProfileRepo.findByUserId(userId);
-        if (incomeProfile.isEmpty()) {
-            return 0;
-        }
+        if (incomeProfile.isEmpty()) return 0;
 
         BigDecimal totalIncome = incomeProfile.get().getDeclaredMonthlyIncome();
+        if (totalIncome.compareTo(BigDecimal.ZERO) == 0) return 0;
 
-        if (totalIncome.compareTo(BigDecimal.ZERO) == 0) {
-            return 0;
-        }
-
-        BigDecimal savingsRate = totalSaved
-                .divide(totalIncome, 2, BigDecimal.ROUND_HALF_UP)
+        BigDecimal savingsRate = totalMonthlyContribution
+                .divide(totalIncome, 2, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
 
         return savingsRate.intValue();
@@ -76,26 +89,22 @@ public class HealthService {
             BigDecimal monthlyEquivalent = BigDecimal.ZERO;
 
             switch (unit) {
-
                 case DAYS:
                     monthlyEquivalent = amount.multiply(
                             BigDecimal.valueOf(30)
                                     .divide(BigDecimal.valueOf(value), 2, RoundingMode.HALF_UP)
                     );
                     break;
-
                 case MONTHS:
                     monthlyEquivalent = amount.divide(
                             BigDecimal.valueOf(value), 2, RoundingMode.HALF_UP
                     );
                     break;
-
                 case YEARS:
                     monthlyEquivalent = amount.divide(
                             BigDecimal.valueOf(value * 12), 2, RoundingMode.HALF_UP
                     );
                     break;
-
                 default:
                     continue;
             }
@@ -115,12 +124,10 @@ public class HealthService {
 
         BigDecimal income = incomeOpt.get().getDeclaredMonthlyIncome();
 
-        if (income.compareTo(BigDecimal.ZERO) == 0) {
-            return 0;
-        }
+        if (income.compareTo(BigDecimal.ZERO) == 0) return 0;
 
         BigDecimal dti = monthlyDebt
-                .divide(income, 2, BigDecimal.ROUND_HALF_UP)
+                .divide(income, 2, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
 
         return dti.intValue();
@@ -130,9 +137,7 @@ public class HealthService {
 
         List<Goals> emergencyGoals = goalsRepo.findByUserIdAndGoalType(userId, "EMERGENCY_FUND");
 
-        if (emergencyGoals == null || emergencyGoals.isEmpty()) {
-            return 0;
-        }
+        if (emergencyGoals == null || emergencyGoals.isEmpty()) return 0;
 
         BigDecimal totalSaved = BigDecimal.ZERO;
         BigDecimal totalTarget = BigDecimal.ZERO;
@@ -146,9 +151,7 @@ public class HealthService {
             }
         }
 
-        if (totalTarget.compareTo(BigDecimal.ZERO) == 0) {
-            return 0;
-        }
+        if (totalTarget.compareTo(BigDecimal.ZERO) == 0) return 0;
 
         BigDecimal coverage = totalSaved
                 .divide(totalTarget, 2, RoundingMode.HALF_UP)
@@ -161,9 +164,7 @@ public class HealthService {
 
         List<Goals> investments = goalsRepo.findByUserIdAndGoalType(userId, "INVESTMENT");
 
-        if (investments == null || investments.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
+        if (investments == null || investments.isEmpty()) return BigDecimal.ZERO;
 
         BigDecimal totalSaved = BigDecimal.ZERO;
         BigDecimal totalTarget = BigDecimal.ZERO;
@@ -177,9 +178,7 @@ public class HealthService {
             }
         }
 
-        if (totalTarget.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
-        }
+        if (totalTarget.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
 
         return totalSaved
                 .divide(totalTarget, 3, RoundingMode.HALF_UP)
@@ -189,22 +188,20 @@ public class HealthService {
 
     public Map<String, Object> calculateFinancialHealthScore(Long userId) {
 
-        int savingsRate         = calculateSavingsRate(userId);
-        int dti                 = calculateDTI(userId);
-        int emergencyFund       = calculateEmergencyFundCoverage(userId);
+        int savingsRate             = calculateSavingsRate(userId);
+        int dti                     = calculateDTI(userId);
+        int emergencyFund           = calculateEmergencyFundCoverage(userId);
         BigDecimal investmentGrowth = calculateInvestmentGrowth(userId);
 
         int savingsScore    = Math.min((savingsRate * 100) / 50, 100);
         int dtiScore        = Math.max(0, 100 - (dti * 100 / 36));
         int emergencyScore  = Math.min(emergencyFund, 100);
-        int investmentScore = Math.min(
-                investmentGrowth.multiply(BigDecimal.valueOf(10)).intValue(), 100
-        );
+        int investmentScore = Math.min(investmentGrowth.intValue(), 100);
 
         int finalScore = (int) Math.round(
-                (savingsScore    * 0.30) +
-                        (dtiScore        * 0.30) +
-                        (emergencyScore  * 0.25) +
+                (savingsScore   * 0.30) +
+                        (dtiScore       * 0.30) +
+                        (emergencyScore * 0.25) +
                         (investmentScore * 0.15)
         );
 
