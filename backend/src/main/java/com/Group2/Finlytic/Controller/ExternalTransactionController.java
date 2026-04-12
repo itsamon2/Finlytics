@@ -29,9 +29,11 @@ public class ExternalTransactionController {
             @RequestHeader("X-Api-Key") String apiKey) {
 
         // Simple shared-secret auth between the two apps
-        if (!apiKey.equals(System.getenv("INTERNAL_API_KEY"))) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+        String expectedKey = System.getenv("INTERNAL_API_KEY");
+if (expectedKey == null || !expectedKey.equals(apiKey)) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(Map.of("error", "Invalid API key"));
+}
 
         // Look up user by mobile number
         User user = userRepo.findByPhoneNumber(request.getPhoneNumber())
