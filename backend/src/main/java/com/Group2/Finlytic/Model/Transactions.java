@@ -32,6 +32,12 @@ public class Transactions {
     @Column(name = "category")
     private String category;
 
+    @Column(name = "mpesa_code", unique = false)
+    private String mpesaCode;  // ← ADDED
+
+    @Column(name = "description")
+    private String description;  // ← ADDED
+
     @CreationTimestamp
     @Column(name = "creation_date", updatable = false)
     private LocalDate creationDate;
