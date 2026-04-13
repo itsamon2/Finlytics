@@ -15,6 +15,7 @@ public interface Transactionsrepo extends JpaRepository<Transactions, Long> {
     List<Transactions> findByUserId(Long userId);
 
     List<Transactions> findByCategoryAndUserId(String category, Long userId);
+    boolean existsByMpesaCodeAndUserId(String mpesaCode, Long userId);
 
     @Query("SELECT t FROM Transactions t WHERE t.transactionId = :id AND t.userId = :userId")
     java.util.Optional<Transactions> findByTransactionIdAndUserId(

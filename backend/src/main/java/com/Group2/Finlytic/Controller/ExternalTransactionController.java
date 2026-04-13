@@ -5,6 +5,7 @@ import com.Group2.Finlytic.Model.Transactions;
 import com.Group2.Finlytic.Model.User;
 import com.Group2.Finlytic.Service.TransactionsService;
 import com.Group2.Finlytic.repo.UserRepo;
+import com.Group2.Finlytic.repo.Transactionsrepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,9 @@ public class ExternalTransactionController {
 
     @Autowired
     private UserRepo userRepo;
+    
+    @Autowired
+    private Transactionsrepo transactionsRepo; // ← ADDED
 
     @PostMapping("/mpesa")
     public ResponseEntity<?> receiveMpesaTransaction(
@@ -43,10 +47,19 @@ public class ExternalTransactionController {
                     .body(Map.of("error", "User not found for number: " + request.getPhoneNumber()));
         }
 
+         if (request.getMpesaCode() != null && !request.getMpesaCode().isEmpty()) {
+        boolean exists = transactionsRepo.existsByMpesaCodeAndUserId(
+                request.getMpesaCode(), user.getId());
+        if (exists) {
+            return ResponseEntity.ok(Map.of("status", "skipped", "reason", "duplicate"));
+        }
+        }
+
         // Save transaction
         Transactions transaction = new Transactions();
         transaction.setUserId(user.getId());
         transaction.setRawMessage(request.getRawSmsMessage());
+        transaction.setMpesaCode(request.getMpesaCode());
         transaction.setCreationDate(LocalDate.now());
 
         transactionsService.saveTransaction(transaction);
