@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
@@ -28,24 +29,46 @@ public class ExternalTransactionController {
             @RequestBody MpesaTransactionRequest request,
             @RequestHeader("X-Api-Key") String apiKey) {
 
-        // Simple shared-secret auth between the two apps
+        // Validate API key
         String expectedKey = System.getenv("INTERNAL_API_KEY");
-if (expectedKey == null || !expectedKey.equals(apiKey)) {
-    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("error", "Invalid API key"));
-}
+        if (expectedKey == null || !expectedKey.equals(apiKey)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid API key"));
+        }
 
-        // Look up user by mobile number
-        User user = userRepo.findByPhoneNumber(request.getPhoneNumber())
-                .orElseThrow(() -> new RuntimeException("User not found for number: " + request.getPhoneNumber()));
+        // Find user trying all phone number formats
+        User user = findUserByPhone(request.getPhoneNumber());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found for number: " + request.getPhoneNumber()));
+        }
 
+        // Save transaction
         Transactions transaction = new Transactions();
         transaction.setUserId(user.getId());
-        transaction.setRawMessage(request.getRawSmsMessage()); // your existing categorization kicks in here
+        transaction.setRawMessage(request.getRawSmsMessage());
         transaction.setCreationDate(LocalDate.now());
 
         transactionsService.saveTransaction(transaction);
 
         return ResponseEntity.ok(Map.of("status", "received"));
+    }
+
+    private User findUserByPhone(String phone) {
+        // Try as-is first e.g. 254745188124
+        Optional<User> user = userRepo.findByPhoneNumber(phone);
+        if (user.isPresent()) return user.get();
+
+        // Try with leading 0 e.g. 0745188124
+        if (phone.startsWith("254")) {
+            user = userRepo.findByPhoneNumber("0" + phone.substring(3));
+            if (user.isPresent()) return user.get();
+        }
+
+        // Try with + prefix e.g. +254745188124
+        user = userRepo.findByPhoneNumber("+" + phone);
+        if (user.isPresent()) return user.get();
+
+        return null;
     }
 }
