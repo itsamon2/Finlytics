@@ -24,9 +24,9 @@ public class ExternalTransactionController {
 
     @Autowired
     private UserRepo userRepo;
-    
+
     @Autowired
-    private Transactionsrepo transactionsRepo; // ← ADDED
+    private Transactionsrepo transactionsRepo;
 
     @PostMapping("/mpesa")
     public ResponseEntity<?> receiveMpesaTransaction(
@@ -47,12 +47,22 @@ public class ExternalTransactionController {
                     .body(Map.of("error", "User not found for number: " + request.getPhoneNumber()));
         }
 
-         if (request.getMpesaCode() != null && !request.getMpesaCode().isEmpty()) {
-        boolean exists = transactionsRepo.existsByMpesaCodeAndUserId(
-                request.getMpesaCode(), user.getId());
-        if (exists) {
-            return ResponseEntity.ok(Map.of("status", "skipped", "reason", "duplicate"));
+        // Duplicate check by mpesaCode
+        if (request.getMpesaCode() != null && !request.getMpesaCode().isEmpty()) {
+            boolean exists = transactionsRepo.existsByMpesaCodeAndUserId(
+                    request.getMpesaCode(), user.getId());
+            if (exists) {
+                return ResponseEntity.ok(Map.of("status", "skipped", "reason", "duplicate"));
+            }
         }
+
+        // Duplicate check by raw message as fallback
+        if (request.getRawSmsMessage() != null) {
+            boolean exists = transactionsRepo.existsByRawMessageAndUserId(
+                    request.getRawSmsMessage(), user.getId());
+            if (exists) {
+                return ResponseEntity.ok(Map.of("status", "skipped", "reason", "duplicate"));
+            }
         }
 
         // Save transaction
