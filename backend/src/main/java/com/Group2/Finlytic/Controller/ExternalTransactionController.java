@@ -40,6 +40,12 @@ public class ExternalTransactionController {
                     .body(Map.of("error", "Invalid API key"));
         }
 
+        // Reject blank phone numbers before querying
+        if (request.getPhoneNumber() == null || request.getPhoneNumber().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Phone number is missing from request"));
+        }
+
         // Find user trying all phone number formats
         User user = findUserByPhone(request.getPhoneNumber());
         if (user == null) {
@@ -78,6 +84,9 @@ public class ExternalTransactionController {
     }
 
     private User findUserByPhone(String phone) {
+        // Guard against blank phone numbers reaching the DB query
+        if (phone == null || phone.isBlank()) return null;
+
         // Try as-is first e.g. 254745188124
         Optional<User> user = userRepo.findByPhoneNumber(phone);
         if (user.isPresent()) return user.get();
