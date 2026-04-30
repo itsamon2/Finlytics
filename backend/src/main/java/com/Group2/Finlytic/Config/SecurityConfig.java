@@ -49,7 +49,9 @@ public class SecurityConfig {
                                 "/login/oauth2/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api/mpesa"
+                                "/api/mpesa",
+                                "/api/auth/verify-otp",
+                                "/api/auth/resend-otp"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

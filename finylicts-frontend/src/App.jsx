@@ -20,6 +20,7 @@ import TaxHealthPageWrapper from './pages/TaxHealthPageWrapper';
 import SettingsPage from './pages/SettingsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ReportsPage from './pages/ReportsPage';
+import VerifyOtpPage from './pages/VerifyOtpPage'; // ✅ Fixed: correct name, casing, and closing quote
 import './App.css';
 
 const AnalysisPage = () => <div className="content-area"><h1>Analysis Page</h1><p>Coming soon...</p></div>;
@@ -36,6 +37,7 @@ function App() {
             <Route path="/register"        element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/auth/callback"   element={<OAuthCallback />} />
+            <Route path="/verify-otp"      element={<VerifyOtpPage />} />
 
             {/* Protected routes */}
             <Route path="/" element={
