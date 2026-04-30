@@ -39,8 +39,14 @@ const LoginPage = () => {
     setError('');
     try {
       const result = await login(email, password);
+
       if (result.success) {
         navigate('/dashboard');
+
+      // ✅ Email not verified — redirect to OTP page with their email
+      } else if (result.unverified) {
+        navigate('/verify-otp', { state: { email: result.email } });
+
       } else {
         setError(result.error || 'Invalid email or password');
       }
@@ -57,7 +63,6 @@ const LoginPage = () => {
 
   return (
     <div className="login-page">
-      {/* Background div kept for compatibility but hidden via CSS */}
       <div className="login-background"></div>
 
       <div className="login-container">
@@ -165,7 +170,7 @@ const LoginPage = () => {
               <span>or continue with</span>
             </motion.div>
 
-            {/* Google only — full width */}
+            {/* Google */}
             <motion.div variants={itemVariants} className="social-buttons">
               <button
                 type="button"

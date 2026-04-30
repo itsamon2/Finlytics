@@ -58,26 +58,26 @@ const RegisterPage = () => {
   };
 
   const validateEmail = (v) => {
-    if (!v)                                  return 'Email is required';
+    if (!v)                                     return 'Email is required';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Please enter a valid email address';
     return '';
   };
 
   const validatePhone = (v) => {
-    if (!v)           return 'Phone number is required';
+    if (!v)            return 'Phone number is required';
     if (v.length < 10) return 'Please enter a valid phone number';
     return '';
   };
 
   const validatePassword = (v) => {
-    if (!v)          return 'Password is required';
+    if (!v)           return 'Password is required';
     if (v.length < 8) return 'Password must be at least 8 characters';
     return '';
   };
 
   const validateConfirmPassword = (v) => {
-    if (!v)                         return 'Please confirm your password';
-    if (v !== formData.password)    return 'Passwords do not match';
+    if (!v)                      return 'Please confirm your password';
+    if (v !== formData.password) return 'Passwords do not match';
     return '';
   };
 
@@ -164,8 +164,9 @@ const RegisterPage = () => {
         '' // location removed — pass empty string to keep API signature
       );
 
-      if (result.success) {
-        navigate('/dashboard');
+     if (result.success) {
+         navigate('/verify-otp', { state: { email: formData.email } });
+
       } else {
         setError(result.error || 'Registration failed. Please try again.');
       }
@@ -270,7 +271,7 @@ const RegisterPage = () => {
               )}
             </motion.div>
 
-            {/* Phone — FiPhone icon (correct icon for phone field) */}
+            {/* Phone */}
             <motion.div variants={itemVariants} className="form-group">
               <label className={focusedField === 'phone' ? 'focused' : ''}>
                 <FiPhone className="field-icon" />
