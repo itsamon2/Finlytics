@@ -151,3 +151,10 @@ export const incomeProfileService = {
   create: (data)  => request('/income', { method: 'POST', body: data }),
   update: (data)  => request('/income', { method: 'PUT',  body: data }),
 };
+
+export const scenarioService = {
+  run:     (data)  => request('/scenarios/run',  { method: 'POST', body: data }),
+  save:    (data)  => request('/scenarios/save', { method: 'POST', body: data }),
+  getAll:  ()      => request('/scenarios'),
+  delete:  (id)    => request(`/scenarios/${id}`, { method: 'DELETE' }),
+};
