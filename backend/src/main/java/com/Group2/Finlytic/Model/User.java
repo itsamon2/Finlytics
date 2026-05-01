@@ -2,6 +2,7 @@ package com.Group2.Finlytic.Model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+
 @Entity
 @Data
 @Table(name = "users")
@@ -34,9 +35,12 @@ public class User {
     private String profilePhoto;
 
     @Column(nullable = true)
-    private String provider; // "LOCAL" or "GOOGLE"
+    private String provider;
 
     private boolean enabled = true;
+
+    @Column(nullable = false)
+    private boolean emailVerified = false;
 
     public Long getUserId() {
         return this.id;

@@ -8,9 +8,9 @@ export const useAuth = () => {
   return context;
 };
 
-const TOKEN_KEY  = 'auth_token';
-const USER_KEY   = 'auth_user';
-const BASE_URL   = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const TOKEN_KEY = 'auth_token';
+const USER_KEY  = 'auth_user';
+const BASE_URL  = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export const AuthProvider = ({ children }) => {
   const [user,    setUser]    = useState(() => {
@@ -22,9 +22,8 @@ export const AuthProvider = ({ children }) => {
 
   // ── Restore session on mount ────────────────────────────────────────────────
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
+    const token  = localStorage.getItem(TOKEN_KEY);
     const stored = localStorage.getItem(USER_KEY);
-
     if (token && stored) {
       setUser(JSON.parse(stored));
     }
@@ -48,13 +47,23 @@ export const AuthProvider = ({ children }) => {
         body:    JSON.stringify({ email, password }),
       });
 
+      const data = await res.json().catch(() => ({}));
+
+      // ✅ Handle unverified email — return special flag so LoginPage can redirect
+      if (res.status === 403) {
+        return {
+          success:     false,
+          unverified:  true,
+          email:       data.email || email,
+          error:       data.message || 'Email not verified',
+        };
+      }
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.message || 'Invalid email or password');
       }
 
       // Backend returns: { token, email, name, role, photo }
-      const data = await res.json();
       const userData = {
         name:  data.name,
         email: data.email,
@@ -71,7 +80,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ── Called by OAuthCallback after Google redirect ───────────────────────────
-  // token comes from /auth/callback?token=..., userInfo from GET /api/auth/me
   const loginWithToken = useCallback((token, userInfo) => {
     const userData = {
       name:  userInfo.name,
@@ -82,30 +90,43 @@ export const AuthProvider = ({ children }) => {
     persist(token, userData);
   }, [persist]);
 
+  // ── ✅ Called by VerifyOtpPage after successful OTP verification ─────────────
+  // Backend returns: { token, email, name, role, photo }
+  const loginAfterOtp = useCallback((data) => {
+    const userData = {
+      name:  data.name,
+      email: data.email,
+      role:  data.role,
+      photo: data.photo || null,
+    };
+    persist(data.token, userData);
+  }, [persist]);
+
   // ── Register ────────────────────────────────────────────────────────────────
   const register = async (name, email, password, phone, location) => {
-    setError('');
-    try {
-      const res = await fetch(`${BASE_URL}/api/auth/register`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name, email, password, phone, location }),
-      });
+  setError('');
+  try {
+    const res = await fetch(`${BASE_URL}/api/auth/register`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ name, email, password, phone, location }),
+    });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || 'Registration failed');
-      }
+    const data = await res.json().catch(() => ({}));
 
-      // Auto-login after successful registration
-      return await login(email, password);
-    } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
+    if (!res.ok) {
+      throw new Error(data.message || 'Registration failed');
     }
-  };
 
-  // ── Update profile (local + backend) ───────────────────────────────────────
+    // ✅ Just return success — NO login() call here
+    return { success: true, email };
+  } catch (err) {
+    setError(err.message);
+    return { success: false, error: err.message };
+  }
+};
+
+  // ── Update profile ──────────────────────────────────────────────────────────
   const updateProfile = async (profileData) => {
     setError('');
     try {
@@ -121,15 +142,14 @@ export const AuthProvider = ({ children }) => {
 
       if (!res.ok) throw new Error('Failed to update profile');
 
-      const updated = await res.json();
+      const updated     = await res.json();
       const updatedUser = { ...user, ...updated };
       localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
       setUser(updatedUser);
-      // Keep profileSettings in sync for pages that still read it
       localStorage.setItem('profileSettings', JSON.stringify(profileData));
       return { success: true };
     } catch (err) {
-      // Fallback: update locally only (so UI doesn't break if endpoint isn't ready)
+      // Fallback: update locally only
       const updatedUser = { ...user, ...profileData };
       localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
       setUser(updatedUser);
@@ -178,6 +198,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     login,
     loginWithToken,   // used by OAuthCallback
+    loginAfterOtp,    // ✅ used by VerifyOtpPage
     register,
     logout,
     forgotPassword,
