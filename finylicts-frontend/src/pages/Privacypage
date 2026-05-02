@@ -1,0 +1,331 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { FiArrowLeft, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import './LegalPage.css';
+
+const LAST_UPDATED = 'May 2, 2026';
+
+const sections = [
+  {
+    id: 'overview',
+    title: '1. Overview',
+    content: `Finlytics ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our personal finance platform, including our web application and any related services (collectively, the "Service").
+
+This policy applies to all users of Finlytics and should be read alongside our Terms of Service. By using the Service, you consent to the practices described in this Privacy Policy. If you disagree with any part of this policy, please discontinue use of the Service.
+
+We will notify you of any material changes to this policy via email or prominent in-app notice at least 14 days before changes take effect.`,
+  },
+  {
+    id: 'information-collected',
+    title: '2. Information We Collect',
+    content: `We collect information in the following ways:
+
+INFORMATION YOU PROVIDE DIRECTLY
+• Account registration data: full name, email address, phone number, and password
+• Profile information: preferences, currency settings, and notification choices
+• Financial goals, budget categories, and scenario inputs you create within the app
+• Communications you send to our support team
+
+INFORMATION COLLECTED AUTOMATICALLY
+• Usage data: pages visited, features used, time spent, and click patterns
+• Device information: browser type, operating system, IP address, and device identifiers
+• Log data: access times, error logs, and referring URLs
+• Cookies and similar tracking technologies (see Section 7)
+
+FINANCIAL DATA FROM LINKED ACCOUNTS
+• Transaction history, account balances, and account names from institutions you choose to connect
+• This data is retrieved in read-only mode through secure API integrations
+• We do not collect your banking credentials — authentication is handled directly by your institution or a regulated data aggregator
+
+THIRD-PARTY SIGN-IN DATA
+• If you sign in via Google OAuth, we receive your name, email address, and profile picture as permitted by your Google account settings`,
+  },
+  {
+    id: 'how-we-use',
+    title: '3. How We Use Your Information',
+    content: `We use the information we collect to:
+
+PROVIDE AND IMPROVE THE SERVICE
+• Create and manage your account
+• Sync, display, and analyse your financial data
+• Power budgets, goals, scenario modelling, and AI advisory features
+• Generate financial reports and insights personalised to you
+• Troubleshoot bugs and improve platform performance
+
+COMMUNICATE WITH YOU
+• Send transactional emails (account verification, OTP codes, password resets)
+• Deliver in-app notifications and alerts based on your preferences
+• Send product updates and feature announcements (you may opt out at any time)
+• Respond to your support requests
+
+SECURITY AND COMPLIANCE
+• Detect and prevent fraudulent activity and unauthorised access
+• Comply with applicable legal obligations and regulatory requirements
+• Enforce our Terms of Service
+
+ANALYTICS AND RESEARCH
+• Analyse aggregated, anonymised usage patterns to improve our product
+• Conduct internal research on financial behaviour trends (never using identifiable personal data)
+
+We do not use your personal or financial data to train external AI models or sell insights to advertisers.`,
+  },
+  {
+    id: 'data-sharing',
+    title: '4. How We Share Your Information',
+    content: `We do not sell, rent, or trade your personal or financial information. We may share your data only in the following limited circumstances:
+
+SERVICE PROVIDERS
+We share data with trusted third-party vendors who assist in operating the Service, including:
+• Cloud hosting and infrastructure providers
+• Email delivery services
+• Analytics platforms (using anonymised data only)
+• Financial data aggregators for account linking
+
+All service providers are contractually bound to use your data only as instructed by us and to maintain appropriate security standards.
+
+LEGAL REQUIREMENTS
+We may disclose your information if required to do so by law, subpoena, court order, or governmental authority, or if we believe in good faith that disclosure is necessary to protect our rights, your safety, or the safety of others.
+
+BUSINESS TRANSFERS
+In the event of a merger, acquisition, or sale of all or a portion of our assets, your information may be transferred as part of that transaction. We will notify you via email and/or in-app notice before your data is transferred and becomes subject to a different privacy policy.
+
+WITH YOUR CONSENT
+We may share your information for any other purpose with your explicit consent.`,
+  },
+  {
+    id: 'data-security',
+    title: '5. Data Security',
+    content: `We take the security of your data seriously and implement industry-standard measures to protect it:
+
+ENCRYPTION
+• All data is encrypted in transit using TLS 1.2 or higher
+• Financial data and sensitive personal information are encrypted at rest using AES-256
+• Passwords are hashed using bcrypt and are never stored in plain text
+
+ACCESS CONTROLS
+• Access to production data is restricted to authorised personnel on a need-to-know basis
+• Multi-factor authentication is required for all internal systems
+• Regular access reviews and privilege audits are conducted
+
+INFRASTRUCTURE
+• Our infrastructure is hosted on SOC 2-compliant cloud providers
+• We conduct regular vulnerability scans and penetration testing
+• Security incidents are logged, monitored, and responded to promptly
+
+ACCOUNT SECURITY
+• We support two-factor authentication via OTP for your account
+• Suspicious login attempts trigger alerts and temporary locks
+• You can view and revoke active sessions from your Settings page
+
+Despite these measures, no method of transmission or storage is 100% secure. We encourage you to use a strong, unique password and to keep your credentials confidential.`,
+  },
+  {
+    id: 'data-retention',
+    title: '6. Data Retention',
+    content: `We retain your personal and financial data for as long as your account is active or as needed to provide the Service. Specifically:
+
+• Account data is retained for the duration of your account plus 30 days after deletion to allow for recovery
+• Financial transaction data synced from linked accounts is retained for up to 7 years for historical analysis features, unless you request earlier deletion
+• Anonymised, aggregated analytics data may be retained indefinitely as it cannot be linked back to you
+• Legal and compliance records may be retained for up to 7 years as required by South African law
+
+Upon account deletion, we will permanently delete your personal data within 30 days, except where retention is required by law. You will receive confirmation once deletion is complete.`,
+  },
+  {
+    id: 'cookies',
+    title: '7. Cookies & Tracking Technologies',
+    content: `We use cookies and similar technologies to operate and improve the Service:
+
+ESSENTIAL COOKIES
+Required for the Service to function — including session management, authentication tokens, and security features. These cannot be disabled without affecting Service functionality.
+
+ANALYTICS COOKIES
+Help us understand how users interact with the Service (e.g., pages visited, features used). We use anonymised data only and do not build individual advertising profiles.
+
+PREFERENCE COOKIES
+Remember your settings such as theme preference, language, and dashboard layout.
+
+THIRD-PARTY COOKIES
+Some features may use third-party services (e.g., analytics providers) that set their own cookies. These are governed by their respective privacy policies.
+
+You can manage cookie preferences through your browser settings. Note that disabling certain cookies may affect the functionality of the Service. We do not use cookies for targeted advertising.`,
+  },
+  {
+    id: 'your-rights',
+    title: '8. Your Rights',
+    content: `Under applicable privacy laws, including the Protection of Personal Information Act (POPIA) of South Africa, you have the following rights:
+
+RIGHT TO ACCESS
+You may request a copy of the personal information we hold about you at any time.
+
+RIGHT TO CORRECTION
+You may request correction of inaccurate or incomplete personal information.
+
+RIGHT TO DELETION
+You may request deletion of your personal data. We will action this within 30 days, subject to legal retention obligations.
+
+RIGHT TO OBJECT
+You may object to the processing of your personal data for direct marketing purposes at any time. You can opt out of marketing emails via the unsubscribe link or your notification settings.
+
+RIGHT TO DATA PORTABILITY
+You may request an export of your personal data in a commonly used, machine-readable format.
+
+RIGHT TO WITHDRAW CONSENT
+Where processing is based on your consent, you may withdraw consent at any time without affecting the lawfulness of prior processing.
+
+To exercise any of these rights, contact us at privacy@finlytics.app. We will respond within 30 days. We may need to verify your identity before actioning your request.`,
+  },
+  {
+    id: 'children',
+    title: '9. Children\'s Privacy',
+    content: `Finlytics is not directed at individuals under the age of 18. We do not knowingly collect personal information from children. If you believe we have inadvertently collected information from a minor, please contact us immediately at privacy@finlytics.app and we will take prompt steps to delete such information.
+
+Parents and guardians who become aware that their child has provided us with personal data without consent should contact us at the address below.`,
+  },
+  {
+    id: 'third-party',
+    title: '10. Third-Party Links & Services',
+    content: `The Service may contain links to third-party websites or integrate with external services (such as your bank or Google). This Privacy Policy applies only to Finlytics and we are not responsible for the privacy practices of third parties.
+
+We encourage you to review the privacy policies of any third-party services you connect or link to through Finlytics. When you link a financial account, you are also subject to the terms and privacy practices of your financial institution and any data aggregator used to facilitate the connection.`,
+  },
+  {
+    id: 'international',
+    title: '11. International Data Transfers',
+    content: `Finlytics is based in South Africa. If you access the Service from outside South Africa, your information may be transferred to, stored, and processed in South Africa or other countries where our service providers operate.
+
+We ensure that any international transfer of personal data is subject to appropriate safeguards, including standard contractual clauses or adequacy decisions, consistent with the requirements of POPIA and other applicable privacy laws.`,
+  },
+  {
+    id: 'contact',
+    title: '12. Contact & Information Officer',
+    content: `If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact our Information Officer as required under POPIA:
+
+Privacy & Data Enquiries: privacy@finlytics.app
+General Support: support@finlytics.app
+Legal Matters: legal@finlytics.app
+Website: www.finlytics.app
+
+We aim to respond to all privacy-related enquiries within 10 business days.
+
+You also have the right to lodge a complaint with the Information Regulator of South Africa if you believe your rights under POPIA have been infringed:
+Website: www.inforegulator.org.za
+Email: inforeg@justice.gov.za`,
+  },
+];
+
+const Section = ({ section }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="legal-section">
+      <button className="legal-section-header" onClick={() => setOpen(o => !o)}>
+        <span>{section.title}</span>
+        {open ? <FiChevronUp /> : <FiChevronDown />}
+      </button>
+      {open && (
+        <motion.div
+          className="legal-section-body"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          transition={{ duration: 0.25 }}
+        >
+          {section.content.split('\n\n').map((para, i) => (
+            <p key={i}>{para}</p>
+          ))}
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
+const PrivacyPage = () => {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  return (
+    <div className="legal-root">
+      <nav className="legal-nav">
+        <Link to="/" className="legal-back">
+          <FiArrowLeft /> Finlytics
+        </Link>
+        <div className="legal-nav-links">
+          <Link to="/terms">Terms</Link>
+          <Link to="/privacy" className="active">Privacy</Link>
+        </div>
+      </nav>
+
+      <div className="legal-container">
+        <motion.div
+          className="legal-hero"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="legal-badge legal-badge-green">Privacy</div>
+          <h1>Privacy Policy</h1>
+          <p className="legal-meta">Last updated: {LAST_UPDATED}</p>
+          <p className="legal-intro">
+            At Finlytics, your financial data is yours. This Privacy Policy explains
+            exactly what information we collect, how we use it, and the controls you
+            have over your data. We are committed to transparency and will never sell
+            your personal information.
+          </p>
+        </motion.div>
+
+        <div className="legal-highlights">
+          {[
+            { icon: '🔒', title: 'We never sell your data', desc: 'Your personal and financial information is never sold to third parties or advertisers.' },
+            { icon: '👁️', title: 'Read-only access', desc: 'We only read your financial data. We never initiate transactions or move funds.' },
+            { icon: '🗑️', title: 'Delete anytime', desc: 'You can request full deletion of your data at any time, no questions asked.' },
+          ].map((h, i) => (
+            <div key={i} className="legal-highlight-card">
+              <span className="legal-highlight-icon">{h.icon}</span>
+              <strong>{h.title}</strong>
+              <p>{h.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="legal-toc">
+          <p className="legal-toc-title">Table of Contents</p>
+          <div className="legal-toc-grid">
+            {sections.map(s => (
+              <a key={s.id} href={`#${s.id}`} className="legal-toc-link"
+                onClick={e => {
+                  e.preventDefault();
+                  document.querySelector(`#${s.id} .legal-section-header`)?.click();
+                  setTimeout(() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth' }), 50);
+                }}
+              >
+                {s.title}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div className="legal-sections">
+          {sections.map(s => (
+            <div id={s.id} key={s.id}>
+              <Section section={s} />
+            </div>
+          ))}
+        </div>
+
+        <div className="legal-footer-note">
+          <p>
+            Your trust is the foundation of everything we do at Finlytics.
+            For privacy enquiries, contact us at <a href="mailto:privacy@finlytics.app">privacy@finlytics.app</a>
+          </p>
+          <div className="legal-footer-links">
+            <Link to="/terms">Terms of Service</Link>
+            <Link to="/login">Sign in</Link>
+            <Link to="/register">Create account</Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PrivacyPage;
