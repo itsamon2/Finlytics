@@ -42,6 +42,8 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/auth/callback"   element={<OAuthCallback />} />
             <Route path="/verify-otp"      element={<VerifyOtpPage />} />
+            <Route path="terms"                 element={<TermsPage />} />
+            <Route path="privacy"        element={<PrivacyPage />} />
 
             {/* ── Protected routes ── */}
             <Route path="/dashboard" element={
@@ -70,6 +72,7 @@ function App() {
               <Route path="tax-health"            element={<TaxHealthPageWrapper />} />
               <Route path="settings"              element={<SettingsPage />} />
               <Route path="notifications"         element={<NotificationsPage />} />
+              
             </Route>
 
             {/* ── Fallback ── */}
