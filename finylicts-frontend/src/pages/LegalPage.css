@@ -3,6 +3,8 @@
    Clean light theme, consistent with Finlytics design
    ════════════════════════════════════════════ */
 
+
+ @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 .legal-root {
   --bg:         #ffffff;
   --bg2:        #f8f9fb;
@@ -26,7 +28,7 @@
   font-family: var(--ff-body);
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
 
 /* ── NAV ── */
 .legal-nav {
