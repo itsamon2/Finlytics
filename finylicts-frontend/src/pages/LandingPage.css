@@ -2,6 +2,9 @@
    LandingPage.css — Finlytics Landing Page
    ════════════════════════════════════════════ */
 
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
 /* ── Reset / Root ── */
 .lp-root {
   --bg:         #0d1117;
@@ -27,9 +30,6 @@
   font-family: var(--ff-body);
   overflow-x: hidden;
 }
-
-/* Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* ── NAV ── */
 .lp-nav {
@@ -591,94 +591,63 @@
   font-weight: 300;
 }
 
-/* ── PRICING ── */
-.lp-pricing {
-  padding: 6rem 2rem;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-.lp-pricing-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
-  gap: 1.5rem;
-  margin-top: 1rem;
-}
-
-.lp-plan {
-  background: var(--bg2);
-  border: 0.5px solid var(--border);
-  border-radius: 16px;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+/* ── FREE FEATURES BANNER ── */
+.lp-free-banner {
   position: relative;
+  padding: 80px 24px;
+  background: linear-gradient(135deg, #0B1120 0%, #1A2332 100%);
+  text-align: center;
+  overflow: hidden;
 }
 
-.lp-plan-featured {
-  border-color: var(--accent);
-  background: linear-gradient(160deg, rgba(108,99,255,0.08) 0%, var(--bg2) 60%);
-}
-
-.lp-plan-badge {
+.lp-free-orb {
   position: absolute;
-  top: -13px; left: 50%;
-  transform: translateX(-50%);
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 3px 14px;
-  border-radius: 20px;
-  white-space: nowrap;
-  font-family: var(--ff-body);
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(108, 99, 255, 0.15) 0%, transparent 70%);
+  top: -200px;
+  left: -200px;
+  border-radius: 50%;
+  pointer-events: none;
 }
 
-.lp-plan-name {
-  font-family: var(--ff-mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text3);
+.lp-free-heading {
+  font-size: 42px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #FFFFFF, #6c63ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 16px;
 }
 
-.lp-plan-price {
-  font-family: var(--ff-head);
-  font-size: 2.2rem;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: -0.04em;
+.lp-free-sub {
+  font-size: 18px;
+  color: var(--text2);
+  max-width: 600px;
+  margin: 0 auto 40px;
 }
 
-.lp-plan-period {
-  font-size: 0.85rem;
-  font-weight: 400;
-  color: var(--text3);
-  font-family: var(--ff-body);
-}
-
-.lp-plan-perks {
-  list-style: none;
-  padding: 0; margin: 0;
+.lp-free-features-list {
   display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  flex: 1;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px 32px;
+  max-width: 800px;
+  margin: 0 auto 48px;
 }
 
-.lp-plan-perks li {
+.lp-free-feature-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
+  gap: 8px;
   color: var(--text2);
+  font-size: 15px;
 }
 
-.lp-plan-perks li svg {
-  color: var(--green);
-  flex-shrink: 0;
-  font-size: 0.9rem;
+.lp-free-check {
+  color: #00c896;
+  font-size: 18px;
 }
 
 /* ── CTA BAND ── */
@@ -769,4 +738,16 @@
   .lp-card-stat-row { grid-template-columns: 1fr 1fr; }
   .lp-card-stat:last-child { display: none; }
   .lp-hero-heading { font-size: 2.2rem; }
+  .lp-free-heading { font-size: 32px; }
+  .lp-free-sub { font-size: 16px; padding: 0 16px; }
+  .lp-free-features-list { gap: 14px 20px; }
+  .lp-free-feature-item { font-size: 13px; }
+}
+
+@media (max-width: 480px) {
+  .lp-free-features-list {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
 }

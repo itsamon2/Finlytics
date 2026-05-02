@@ -57,7 +57,7 @@ const features = [
   {
     icon: <FiBarChart2 />,
     title: 'Live Transaction Sync',
-    desc: 'Connect every bank, card, and wallet. Transactions appear in real time, automatically categorised.',
+    desc: 'Connect to your M-pesa. Transactions appear in real time, automatically categorised.',
     color: '#6c63ff',
   },
   {
@@ -69,7 +69,7 @@ const features = [
   {
     icon: <FiPieChart />,
     title: 'Budget Intelligence',
-    desc: 'Flexible budgets that learn from your habits. Get alerted before you overspend — not after.',
+    desc: 'Flexible budgets that learn from your habits. Get alerted before you overspend, not after.',
     color: '#ff7043',
   },
   {
@@ -81,7 +81,7 @@ const features = [
   {
     icon: <FiZap />,
     title: 'AI Financial Advisory',
-    desc: 'Your personal finance coach — always on, always data-backed. Ask anything, get clarity.',
+    desc: 'Your personal finance coach, always on, always data-backed. Ask anything, get clarity.',
     color: '#ffd740',
   },
   {
@@ -115,7 +115,6 @@ const LandingPage = () => {
           <div className="lp-nav-links">
             <a href="#features">Features</a>
             <a href="#stats">Why us</a>
-            <a href="#pricing">Pricing</a>
           </div>
           <div className="lp-nav-ctas">
             <Link to="/login" className="lp-btn-ghost">Sign in</Link>
@@ -158,7 +157,7 @@ const LandingPage = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             Finlytics brings together your accounts, budgets, goals, and taxes
-            into one intelligent dashboard — so you always know where you stand.
+            into one intelligent dashboard, so you always know where you stand.
           </motion.p>
 
           <motion.div
@@ -181,7 +180,7 @@ const LandingPage = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <FiCheckCircle /> No credit card required &nbsp;·&nbsp; <FiCheckCircle /> 30-day free trial
+            <FiCheckCircle /> No credit card required &nbsp;·&nbsp; <FiCheckCircle /> All features free
           </motion.p>
         </div>
 
@@ -203,12 +202,12 @@ const LandingPage = () => {
             <div className="lp-card-stat-row">
               <div className="lp-card-stat">
                 <span className="lp-stat-label">Net Worth</span>
-                <span className="lp-stat-value">R 284,320</span>
+                <span className="lp-stat-value">Ksh 284,320</span>
                 <span className="lp-stat-badge positive">↑ 12.4% this month</span>
               </div>
               <div className="lp-card-stat">
                 <span className="lp-stat-label">Monthly Savings</span>
-                <span className="lp-stat-value">R 8,140</span>
+                <span className="lp-stat-value">Ksh 8,140</span>
                 <span className="lp-stat-badge positive">↑ on track</span>
               </div>
               <div className="lp-card-stat">
@@ -316,7 +315,7 @@ const LandingPage = () => {
         <div className="lp-steps">
           {[
             { n: '01', title: 'Create your account', desc: 'Sign up free with your email or Google. No credit card, no commitment.' },
-            { n: '02', title: 'Connect your accounts', desc: 'Link your banks, investments, and cards securely. Read-only access — we never move your money.' },
+            { n: '02', title: 'Connect your accounts', desc: 'Install the APK to link your M-pesa to allow Read-only access. We never move your money.' },
             { n: '03', title: 'Get your full picture', desc: 'Your dashboard goes live instantly. Set budgets, goals, and let the AI do the heavy lifting.' },
           ].map((s, i) => (
             <FadeUp key={i} delay={i * 0.15} className="lp-step">
@@ -329,60 +328,42 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ══════════════ PRICING ══════════════ */}
-      <section className="lp-pricing" id="pricing">
+      {/* ══════════════ FREE FEATURES BANNER ══════════════ */}
+      <section className="lp-free-banner">
+        <div className="lp-free-orb" />
         <FadeUp>
-          <p className="lp-section-eyebrow">Simple pricing</p>
-          <h2 className="lp-section-heading">Start free. Upgrade when ready.</h2>
+          <h2 className="lp-free-heading">All features. Completely free.</h2>
+          <p className="lp-free-sub">No hidden fees, no premium tiers. Just powerful financial tools for everyone.</p>
+          <div className="lp-free-features-list">
+            <div className="lp-free-feature-item">
+              <FiCheckCircle className="lp-free-check" />
+              <span>Live transaction sync</span>
+            </div>
+            <div className="lp-free-feature-item">
+              <FiCheckCircle className="lp-free-check" />
+              <span>Unlimited budgets & goals</span>
+            </div>
+            <div className="lp-free-feature-item">
+              <FiCheckCircle className="lp-free-check" />
+              <span>AI financial advisor</span>
+            </div>
+            <div className="lp-free-feature-item">
+              <FiCheckCircle className="lp-free-check" />
+              <span>Scenario planner</span>
+            </div>
+            <div className="lp-free-feature-item">
+              <FiCheckCircle className="lp-free-check" />
+              <span>Tax health monitor</span>
+            </div>
+            <div className="lp-free-feature-item">
+              <FiCheckCircle className="lp-free-check" />
+              <span>Advanced reports & analytics</span>
+            </div>
+          </div>
+          <Link to="/register" className="lp-btn-primary lp-btn-lg">
+            Start using Finlytics for free <FiArrowRight />
+          </Link>
         </FadeUp>
-        <div className="lp-pricing-grid">
-          {[
-            {
-              name: 'Free',
-              price: 'R 0',
-              period: 'forever',
-              highlight: false,
-              perks: ['Dashboard & transaction tracking', '2 budget categories', '1 savings goal', 'Basic reports'],
-            },
-            {
-              name: 'Pro',
-              price: 'R 99',
-              period: 'per month',
-              highlight: true,
-              badge: 'Most popular',
-              perks: ['Everything in Free', 'Unlimited budgets & goals', 'AI financial advisor', 'Scenario planner', 'Tax health monitor', 'Advanced reports'],
-            },
-            {
-              name: 'Family',
-              price: 'R 179',
-              period: 'per month',
-              highlight: false,
-              perks: ['Everything in Pro', 'Up to 5 family members', 'Shared goals & budgets', 'Priority support'],
-            },
-          ].map((plan, i) => (
-            <FadeUp key={i} delay={i * 0.1}>
-              <div className={`lp-plan ${plan.highlight ? 'lp-plan-featured' : ''}`}>
-                {plan.badge && <div className="lp-plan-badge">{plan.badge}</div>}
-                <div className="lp-plan-name">{plan.name}</div>
-                <div className="lp-plan-price">
-                  {plan.price}<span className="lp-plan-period"> / {plan.period}</span>
-                </div>
-                <ul className="lp-plan-perks">
-                  {plan.perks.map((p, j) => (
-                    <li key={j}><FiCheckCircle /> {p}</li>
-                  ))}
-                </ul>
-                <Link
-                  to="/register"
-                  className={plan.highlight ? 'lp-btn-primary' : 'lp-btn-ghost'}
-                  style={{ width: '100%', justifyContent: 'center', marginTop: 'auto' }}
-                >
-                  Get started <FiArrowRight />
-                </Link>
-              </div>
-            </FadeUp>
-          ))}
-        </div>
       </section>
 
       {/* ══════════════ CTA BAND ══════════════ */}
@@ -408,7 +389,6 @@ const LandingPage = () => {
             <Link to="/login">Sign in</Link>
             <Link to="/register">Register</Link>
             <a href="#features">Features</a>
-            <a href="#pricing">Pricing</a>
           </div>
           <p className="lp-footer-copy">© 2026 Finlytics. All rights reserved.</p>
         </div>
