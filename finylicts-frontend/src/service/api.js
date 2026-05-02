@@ -70,6 +70,16 @@ export const transactionService = {
   getCashflow:           () => request('/transactions/cashflow'),
   getExpensesByCategory: () => request('/transactions/expenses/category'),
   getByMonth: (month, year) => request(`/transactions/by-month?month=${month}&year=${year}`),
+  
+  // ── NEW: Get recent transactions for savings prompt ─────────────────────────
+  getRecent: (limit = 10) => request(`/transactions/recent?limit=${limit}`),
+  
+  // ── NEW: Assign goal to transaction (for M-Shwari/ZIDII savings) ────────────
+  assignGoalToTransaction: (transactionId, goalName) => 
+    request(`/transactions/${transactionId}/assign-goal`, { 
+      method: 'PUT', 
+      body: { goalName } 
+    }),
 };
 
 export const budgetService = {
@@ -86,7 +96,6 @@ export const budgetService = {
 };
 
 export const goalsService = {
-  // ── Existing ──────────────────────────────────────────────────────────────
   getAll:         ()            => request('/goals'),
   getById:        (id)          => request(`/goals/${id}`),
   create:         (goal)        => request('/goals',              { method: 'POST', body: goal }),
@@ -97,41 +106,21 @@ export const goalsService = {
   getFeasibility: (id)          => requestText(`/goals/${id}/feasibility`),
   getAdvisory:    (id)          => requestText(`/goals/${id}/advisory`),
 
-  // ── New contribution endpoints ────────────────────────────────────────────
-  // Get all goals due for a check-in (called on page load)
   getDueCheckIns: () => request('/goals/due-checkins'),
-
-  // User confirmed a contribution — pass actual amount (full or different)
   confirmContribution: (id, amount) =>
     request(`/goals/${id}/contribute?amount=${amount}`, { method: 'POST' }),
-
-  // User rescheduling — newDate must be a string like "2026-04-05"
   rescheduleContribution: (id, newDate) =>
     request(`/goals/${id}/reschedule?newDate=${newDate}`, { method: 'POST' }),
-
-  // User changing contribution frequency
   updateFrequency: (id, value, unit) =>
     request(`/goals/${id}/frequency?value=${value}&unit=${unit}`, { method: 'POST' }),
-
-  // Get calculated next contribution date for a single goal
   getNextContributionDate: (id) => request(`/goals/${id}/next-contribution`),
 };
 
-// ── Notification service ──────────────────────────────────────────────────────
 export const notificationService = {
-  // Run check + get all notifications (NotificationsPage)
   getAll:        () => request('/notifications'),
-
-  // Run check + get latest 5 (bell dropdown)
   getLatest:     () => request('/notifications/latest'),
-
-  // Unread count for the badge only — lightweight
   getUnreadCount: () => request('/notifications/unread-count'),
-
-  // Mark a single notification as read
   markAsRead:    (id) => request(`/notifications/${id}/read`, { method: 'PATCH' }),
-
-  // Mark all as read
   markAllAsRead: () => request('/notifications/read-all', { method: 'PATCH' }),
 };
 
@@ -141,6 +130,7 @@ export const userService = {
     changePassword:  (data)   => request('/user/change-password',  { method: 'PUT',    body: data }),
     deleteAccount:   ()       => request('/user/account',          { method: 'DELETE' }),
 };
+
 export const healthService = {
   getMetrics: () => request('/health'),
   getTaxSummary: () => request('/health/tax'),

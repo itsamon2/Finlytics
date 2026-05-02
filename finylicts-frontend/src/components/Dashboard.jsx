@@ -8,6 +8,8 @@ import Alerts from './Alerts';
 import UserMenu from './UserMenu';
 import NotificationBell from './NotificationBell';
 import Loader from './Loader';
+import DownloadAPKModal from './DownloadAPKModal';
+import SavingsPromptModal from './SavingsPromptModal';
 import { transactionService } from '../service/api';
 import './Dashboard.css';
 
@@ -19,6 +21,12 @@ const Dashboard = () => {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
+  const [showAPKModal, setShowAPKModal] = useState(false);
+  
+  // Savings prompt states
+  const [showSavingsModal, setShowSavingsModal] = useState(false);
+  const [pendingSavingsTransaction, setPendingSavingsTransaction] = useState(null);
+  const [checkedSavings, setCheckedSavings] = useState(false);
 
   const fetchSummary = () => {
     transactionService.getSummary()
@@ -31,6 +39,78 @@ const Dashboard = () => {
     const interval = setInterval(fetchSummary, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Check if APK modal should be shown after login
+  useEffect(() => {
+    const hasShownModal = localStorage.getItem('apk_modal_shown');
+    if (user && !hasShownModal && !loading) {
+      const timer = setTimeout(() => {
+        setShowAPKModal(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [user, loading]);
+
+  // Check for savings transactions that need goal assignment
+  useEffect(() => {
+    const checkForSavingsTransactions = async () => {
+      // Only check once per session
+      if (checkedSavings || !user) return;
+      
+      const savingsChecked = sessionStorage.getItem('savings_prompt_shown');
+      if (savingsChecked) {
+        setCheckedSavings(true);
+        return;
+      }
+      
+      try {
+        // Fetch recent transactions
+        const transactions = await transactionService.getRecent(10);
+        
+        // Look for savings transactions without a goal assigned
+        const savingsTx = transactions?.find(tx => 
+          (tx.source?.toLowerCase().includes('mshwari') || 
+           tx.source?.toLowerCase().includes('zidii') ||
+           tx.type === 'SAVINGS' ||
+           tx.category === 'Savings') &&
+          !tx.goalAssigned
+        );
+        
+        if (savingsTx) {
+          setPendingSavingsTransaction(savingsTx);
+          setShowSavingsModal(true);
+          sessionStorage.setItem('savings_prompt_shown', 'true');
+        }
+      } catch (error) {
+        console.error('Error checking savings transactions:', error);
+      } finally {
+        setCheckedSavings(true);
+      }
+    };
+    
+    if (user && !loading && !checkedSavings) {
+      checkForSavingsTransactions();
+    }
+  }, [user, loading, checkedSavings]);
+
+  const handleCloseAPKModal = () => {
+    setShowAPKModal(false);
+  };
+
+  const handleCloseSavingsModal = () => {
+    setShowSavingsModal(false);
+  };
+
+  const handleSaveSavingsGoal = async (transaction, goalName) => {
+    try {
+      await transactionService.assignGoalToTransaction(transaction.id, goalName);
+      // Refresh dashboard data to update goals and budgets
+      fetchSummary();
+      console.log(`Goal "${goalName}" assigned to transaction`);
+    } catch (error) {
+      console.error('Error assigning goal:', error);
+    }
+  };
 
   const firstName = user?.name?.split(' ')[0] || 'there';
 
@@ -56,8 +136,32 @@ const Dashboard = () => {
   const monthlyIncome   = parseFloat(summary?.monthlyIncome   || 0);
   const monthlyExpenses = parseFloat(summary?.monthlyExpenses || 0);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'morning';
+    if (hour < 17) return 'afternoon';
+    return 'evening';
+  };
+
   return (
     <div className="dashboard-container">
+
+      {/* APK Download Modal */}
+      <DownloadAPKModal 
+        isOpen={showAPKModal}
+        onClose={handleCloseAPKModal}
+        userName={firstName}
+      />
+
+      {/* Savings Prompt Modal */}
+      {showSavingsModal && pendingSavingsTransaction && (
+        <SavingsPromptModal
+          isOpen={showSavingsModal}
+          onClose={handleCloseSavingsModal}
+          transactionData={pendingSavingsTransaction}
+          onSave={handleSaveSavingsGoal}
+        />
+      )}
 
       {/* ── Header ── */}
       <div className="dashboard-header">
@@ -196,13 +300,6 @@ const Dashboard = () => {
       </div>
     </div>
   );
-};
-
-const getGreeting = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'morning';
-  if (hour < 17) return 'afternoon';
-  return 'evening';
 };
 
 export default Dashboard;

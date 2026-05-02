@@ -63,9 +63,13 @@ const RegisterPage = () => {
     return '';
   };
 
+  // Phone validation - checks if number is valid for the selected country
   const validatePhone = (v) => {
-    if (!v)            return 'Phone number is required';
-    if (v.length < 10) return 'Please enter a valid phone number';
+    if (!v) return 'Phone number is required';
+    // react-phone-number-input provides isPossiblePhoneNumber and isValidPhoneNumber
+    // For now, we'll check if it has at least 10 digits
+    const digitsOnly = v.replace(/\D/g, '');
+    if (digitsOnly.length < 9) return 'Please enter a complete phone number';
     return '';
   };
 
@@ -161,12 +165,11 @@ const RegisterPage = () => {
         formData.email,
         formData.password,
         formData.phoneNumber,
-        '' // location removed — pass empty string to keep API signature
+        ''
       );
 
      if (result.success) {
          navigate('/verify-otp', { state: { email: formData.email } });
-
       } else {
         setError(result.error || 'Registration failed. Please try again.');
       }
@@ -177,7 +180,6 @@ const RegisterPage = () => {
     }
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="login-page">
       <div className="login-background"></div>
@@ -189,7 +191,6 @@ const RegisterPage = () => {
           initial="hidden"
           animate="visible"
         >
-          {/* Logo */}
           <motion.div variants={itemVariants} className="card-logo">
             <h1>Finlytics</h1>
             <p>Personal Finance</p>
@@ -212,7 +213,6 @@ const RegisterPage = () => {
           )}
 
           <form onSubmit={handleSubmit} className="login-form">
-
             {/* Full Name */}
             <motion.div variants={itemVariants} className="form-group">
               <label className={focusedField === 'name' ? 'focused' : ''}>
@@ -271,13 +271,13 @@ const RegisterPage = () => {
               )}
             </motion.div>
 
-            {/* Phone */}
+            {/* Phone Number - Fixed */}
             <motion.div variants={itemVariants} className="form-group">
               <label className={focusedField === 'phone' ? 'focused' : ''}>
                 <FiPhone className="field-icon" />
                 Phone Number
               </label>
-              <div className={`input-wrapper phone-input-wrapper ${errors.phoneNumber ? 'error' : ''}`}>
+              <div className={`input-wrapper ${errors.phoneNumber ? 'error' : ''}`}>
                 <PhoneInput
                   international
                   defaultCountry="KE"
@@ -287,6 +287,7 @@ const RegisterPage = () => {
                   className="phone-input-enhanced"
                   onFocus={() => setFocusedField('phone')}
                   onBlur={() => setFocusedField(null)}
+                  limitMaxLength={true}
                 />
                 {formData.phoneNumber && !errors.phoneNumber && (
                   <motion.span className="input-check" initial={{ scale: 0 }} animate={{ scale: 1 }}>✓</motion.span>

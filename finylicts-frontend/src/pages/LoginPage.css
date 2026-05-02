@@ -128,7 +128,7 @@
 .card-logo h1 {
   font-size: 34px;
   font-weight: 700;
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
   margin: 0 0 4px 0;
   letter-spacing: -0.8px;
   font-family: 'Inter', sans-serif;
@@ -189,12 +189,12 @@
 }
 
 .form-group label.focused {
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
 }
 
 /* Icon sits at exactly the same baseline as the label text */
 .field-icon {
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
   font-size: 14px;
   flex-shrink: 0;
   position: relative;
@@ -224,7 +224,7 @@
 
 .input-wrapper input:focus {
   outline: none;
-  border-color: var(--accent-color, #2DD4BF);
+  border-color: #2DD4BF;
   background: rgba(45, 212, 191, 0.05);
   box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
 }
@@ -261,6 +261,7 @@
   color: #F87171;
   padding-left: 2px;
   display: block;
+  margin-top: 4px;
 }
 
 /* ===== PASSWORD FIELD ===== */
@@ -286,7 +287,7 @@
 }
 
 .password-toggle:hover {
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
 }
 
 /* ===== FORM OPTIONS ===== */
@@ -329,8 +330,8 @@
 }
 
 .checkbox-label input:checked ~ .checkbox-custom {
-  background: var(--accent-color, #2DD4BF);
-  border-color: var(--accent-color, #2DD4BF);
+  background: #2DD4BF;
+  border-color: #2DD4BF;
 }
 
 .checkbox-custom::after {
@@ -356,7 +357,7 @@
 }
 
 .checkbox-text a {
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
   text-decoration: none;
 }
 
@@ -365,7 +366,7 @@
 }
 
 .forgot-link {
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
   font-size: 13px;
   text-decoration: none;
   font-weight: 500;
@@ -513,7 +514,7 @@
 }
 
 .signup-link a {
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
   text-decoration: none;
   font-weight: 600;
   margin-left: 4px;
@@ -543,11 +544,13 @@
   flex-shrink: 0;
 }
 
-/* ===== PHONE INPUT ===== */
+/* ===== PHONE INPUT - COMPLETELY FIXED ===== */
 .phone-input-wrapper {
   padding: 0 !important;
-  overflow: hidden;
+  overflow: visible !important;
   border-radius: 14px;
+  width: 100%;
+  display: block;
 }
 
 .phone-input-enhanced {
@@ -560,44 +563,103 @@
   background: rgba(255, 255, 255, 0.05) !important;
   color: #F1F5F9 !important;
   transition: all 0.2s !important;
+  display: flex !important;
+  align-items: center !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  height: 48px !important;
+  box-sizing: border-box !important;
+  line-height: normal !important;
+  overflow-x: visible !important;
+  overflow-y: hidden !important;
 }
 
-.phone-input-enhanced:focus-within {
-  border-color: var(--accent-color, #2DD4BF) !important;
-  background: rgba(45, 212, 191, 0.05) !important;
-  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12) !important;
+/* Prevent any internal elements from expanding */
+.phone-input-enhanced * {
+  max-height: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .phone-input-enhanced .PhoneInputCountry {
-  margin-right: 12px;
-  color: #F1F5F9;
+  margin: 0 !important;
+  padding: 0 !important;
+  margin-right: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+  height: 100% !important;
 }
 
 .phone-input-enhanced .PhoneInputCountrySelect {
-  background: #1E293B;
-  color: #F1F5F9;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 8px;
-  padding: 4px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #F1F5F9 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 4px 20px 4px 8px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  height: auto !important;
+  min-height: auto !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 6px center !important;
+  background-size: 10px !important;
 }
 
-.phone-input-enhanced .PhoneInputCountrySelect option {
-  background: #1E293B;
-  color: #F1F5F9;
-  padding: 8px;
+.phone-input-enhanced .PhoneInputCountryIcon {
+  width: 22px !important;
+  height: 16px !important;
+  border-radius: 3px !important;
+  margin-right: 6px !important;
+  display: inline-flex !important;
+  vertical-align: middle !important;
 }
 
 .phone-input-enhanced .PhoneInputInput {
-  border: none;
-  background: transparent;
-  color: #F1F5F9;
-  font-size: 14px;
-  font-family: 'Inter', sans-serif;
-  padding: 0;
+  border: none !important;
+  background: transparent !important;
+  color: #F1F5F9 !important;
+  font-size: 14px !important;
+  font-family: 'Inter', sans-serif !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: auto !important;
+  line-height: 20px !important;
 }
 
 .phone-input-enhanced .PhoneInputInput::placeholder {
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Hide any validation popup/dropdown from the library */
+.PhoneInputInternationalIconPhone,
+.PhoneInputCountryIcon--border {
+  display: none !important;
+}
+
+/* Remove focus outline that might cause spacing */
+.phone-input-enhanced:focus-within {
+  border-color: #2DD4BF !important;
+  background: rgba(45, 212, 191, 0.05) !important;
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12) !important;
+  outline: none !important;
+}
+
+/* Error state */
+.input-wrapper.error .phone-input-enhanced {
+  border-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+/* Dark mode */
+[data-theme="dark"] .phone-input-enhanced {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* ===== PASSWORD STRENGTH ===== */
@@ -674,7 +736,7 @@
   border-radius: 12px;
   font-size: 17px;
   font-weight: 600;
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
   margin: 14px 0;
   border: 1px solid rgba(255,255,255,0.08);
 }
@@ -688,7 +750,7 @@
 .resend-link {
   background: none;
   border: none;
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -713,8 +775,8 @@
 }
 
 .back-to-login-btn:hover {
-  border-color: var(--accent-color, #2DD4BF);
-  color: var(--accent-color, #2DD4BF);
+  border-color: #2DD4BF;
+  color: #2DD4BF;
   background: rgba(45, 212, 191, 0.06);
 }
 
@@ -735,7 +797,7 @@
 }
 
 .back-button:hover {
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
 }
 
 /* Forgot Footer */
@@ -747,7 +809,7 @@
 }
 
 .forgot-footer a {
-  color: var(--accent-color, #2DD4BF);
+  color: #2DD4BF;
   text-decoration: none;
   font-weight: 500;
   margin-left: 4px;
@@ -779,6 +841,18 @@
 
   .card-logo h1 {
     font-size: 30px;
+  }
+  
+  .phone-input-enhanced {
+    min-height: 46px !important;
+    max-height: 46px !important;
+    height: 46px !important;
+    padding: 11px 14px !important;
+  }
+  
+  .phone-input-enhanced .PhoneInputCountrySelect {
+    font-size: 12px !important;
+    padding: 3px 18px 3px 6px !important;
   }
 }
 
@@ -817,5 +891,22 @@
   .success-email {
     font-size: 15px;
     padding: 12px;
+  }
+  
+  .phone-input-enhanced {
+    min-height: 44px !important;
+    max-height: 44px !important;
+    height: 44px !important;
+    padding: 10px 12px !important;
+  }
+  
+  .phone-input-enhanced .PhoneInputCountrySelect {
+    font-size: 11px !important;
+    padding: 2px 16px 2px 4px !important;
+  }
+  
+  .phone-input-enhanced .PhoneInputCountryIcon {
+    width: 20px !important;
+    height: 14px !important;
   }
 }
