@@ -6,7 +6,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import ProfilePage from './pages/ProfilePage';
-import LandingPage from './pages/LandingPage';        // ✅ NEW
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -22,6 +22,8 @@ import SettingsPage from './pages/SettingsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ReportsPage from './pages/ReportsPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
+import TermsPage from './pages/TermsPage';       // ✅ NEW
+import PrivacyPage from './pages/PrivacyPage';   // ✅ NEW
 import './App.css';
 
 const AnalysisPage = () => <div className="content-area"><h1>Analysis Page</h1><p>Coming soon...</p></div>;
@@ -36,6 +38,10 @@ function App() {
             {/* ── Landing ── */}
             <Route path="/" element={<LandingPage />} />
 
+            {/* ── Static public pages ── */}
+            <Route path="/terms"           element={<TermsPage />} />
+            <Route path="/privacy"         element={<PrivacyPage />} />
+
             {/* ── Public auth routes ── */}
             <Route path="/login"           element={<LoginPage />} />
             <Route path="/register"        element={<RegisterPage />} />
@@ -49,7 +55,7 @@ function App() {
                 <Layout />
               </ProtectedRoute>
             }>
-              <Route index                        element={<Dashboard />} />
+              <Route index element={<Dashboard />} />
             </Route>
 
             <Route path="/" element={
