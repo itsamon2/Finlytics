@@ -6,6 +6,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import ProfilePage from './pages/ProfilePage';
+import LandingPage from './pages/LandingPage';        // ✅ NEW
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -20,9 +21,7 @@ import TaxHealthPageWrapper from './pages/TaxHealthPageWrapper';
 import SettingsPage from './pages/SettingsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ReportsPage from './pages/ReportsPage';
-import TermsPage from './pages/TermsPage';
-import PrivacyPage from './pages/PrivacyPage'; // 
-import VerifyOtpPage from './pages/VerifyOtpPage'; // ✅ Fixed: correct name, casing, and closing quote
+import VerifyOtpPage from './pages/VerifyOtpPage';
 import './App.css';
 
 const AnalysisPage = () => <div className="content-area"><h1>Analysis Page</h1><p>Coming soon...</p></div>;
@@ -34,7 +33,10 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
+            {/* ── Landing ── */}
+            <Route path="/" element={<LandingPage />} />
+
+            {/* ── Public auth routes ── */}
             <Route path="/login"           element={<LoginPage />} />
             <Route path="/register"        element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -43,14 +45,20 @@ function App() {
             <Route path="terms"                 element={<TermsPage />} />
             <Route path="privacy"        element={<PrivacyPage />} />
 
-            {/* Protected routes */}
+            {/* ── Protected routes ── */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }>
+              <Route index                        element={<Dashboard />} />
+            </Route>
+
             <Route path="/" element={
               <ProtectedRoute>
                 <Layout />
               </ProtectedRoute>
             }>
-              <Route index                        element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard"             element={<Dashboard />} />
               <Route path="profile"               element={<ProfilePage />} />
               <Route path="transactions"          element={<TransactionsPage />} />
               <Route path="budgets"               element={<BudgetsPage />} />
@@ -66,6 +74,9 @@ function App() {
               <Route path="notifications"         element={<NotificationsPage />} />
               
             </Route>
+
+            {/* ── Fallback ── */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
