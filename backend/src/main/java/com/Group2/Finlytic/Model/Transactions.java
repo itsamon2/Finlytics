@@ -32,11 +32,27 @@ public class Transactions {
     @Column(name = "category")
     private String category;
 
-    @Column(name = "mpesa_code", unique = false)
-    private String mpesaCode;  // ← ADDED
+    @Column(name = "mpesa_code")
+    private String mpesaCode;
+
+    @Column(name = "intent")
+    private String intent;
 
     @Column(name = "description")
-    private String description;  // ← ADDED
+    private String description;
+
+    @Column(name = "source")
+    private String source; // MPESA, BANK, MANUAL
+
+    @Column(name = "recipient")
+    private String recipient;
+
+    @Column(name = "ai_confidence")
+    private Double aiConfidence;
+
+    @Column(name = "goal_id")
+    private Long goalId;
+
 
     @CreationTimestamp
     @Column(name = "creation_date", updatable = false)
