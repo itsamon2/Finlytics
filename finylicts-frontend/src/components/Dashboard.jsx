@@ -18,15 +18,14 @@ const Dashboard = () => {
   const navigate    = useNavigate();
   const [timeRange, setTimeRange] = useState('7months');
 
-  const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const [summary, setSummary]   = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error,   setError]     = useState(null);
   const [showAPKModal, setShowAPKModal] = useState(false);
-  
+
   // Savings prompt states
-  const [showSavingsModal, setShowSavingsModal] = useState(false);
+  const [showSavingsModal, setShowSavingsModal]               = useState(false);
   const [pendingSavingsTransaction, setPendingSavingsTransaction] = useState(null);
-  const [checkedSavings, setCheckedSavings] = useState(false);
 
   const fetchSummary = () => {
     transactionService.getSummary()
@@ -40,75 +39,58 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Check if APK modal should be shown after login
+  // Show APK modal once after login
   useEffect(() => {
     const hasShownModal = localStorage.getItem('apk_modal_shown');
     if (user && !hasShownModal && !loading) {
-      const timer = setTimeout(() => {
-        setShowAPKModal(true);
-      }, 1500);
+      const timer = setTimeout(() => setShowAPKModal(true), 1500);
       return () => clearTimeout(timer);
     }
   }, [user, loading]);
 
-  // Check for savings transactions that need goal assignment
+  // Check for unassigned savings transactions — uses getAll, not getRecent
   useEffect(() => {
-    const checkForSavingsTransactions = async () => {
-      // Only check once per session
-      if (checkedSavings || !user) return;
-      
-      const savingsChecked = sessionStorage.getItem('savings_prompt_shown');
-      if (savingsChecked) {
-        setCheckedSavings(true);
-        return;
-      }
-      
+    if (!user || loading) return;
+
+    const alreadyChecked = sessionStorage.getItem('savings_prompt_shown');
+    if (alreadyChecked) return;
+
+    const checkForSavings = async () => {
       try {
-        // Fetch recent transactions
-        const transactions = await transactionService.getRecent(10);
-        
-        // Look for savings transactions without a goal assigned
-        const savingsTx = transactions?.find(tx => 
-          (tx.source?.toLowerCase().includes('mshwari') || 
-           tx.source?.toLowerCase().includes('zidii') ||
-           tx.type === 'SAVINGS' ||
-           tx.category === 'Savings') &&
-          !tx.goalAssigned
+        const transactions = await transactionService.getAll();
+
+        if (!transactions || transactions.length === 0) return;
+
+        // Match what your backend actually returns:
+        // intent === 'SAVING' and goalId is null = needs goal assignment
+        const unassigned = transactions.find(tx =>
+          tx.intent === 'SAVING' && !tx.goalId
         );
-        
-        if (savingsTx) {
-          setPendingSavingsTransaction(savingsTx);
+
+        if (unassigned) {
+          setPendingSavingsTransaction({
+            transactionId: unassigned.transactionId,
+            amount:        unassigned.amount,
+            suggestedGoal: null,
+          });
           setShowSavingsModal(true);
           sessionStorage.setItem('savings_prompt_shown', 'true');
         }
-      } catch (error) {
-        console.error('Error checking savings transactions:', error);
-      } finally {
-        setCheckedSavings(true);
+      } catch (err) {
+        // Silently fail — don't log out the user
+        console.error('Savings check failed:', err.message);
       }
     };
-    
-    if (user && !loading && !checkedSavings) {
-      checkForSavingsTransactions();
-    }
-  }, [user, loading, checkedSavings]);
 
-  const handleCloseAPKModal = () => {
-    setShowAPKModal(false);
-  };
+    checkForSavings();
+  }, [user, loading]);
 
-  const handleCloseSavingsModal = () => {
-    setShowSavingsModal(false);
-  };
+  const handleCloseAPKModal    = () => setShowAPKModal(false);
+  const handleCloseSavingsModal = () => setShowSavingsModal(false);
 
-  const handleSaveSavingsGoal = async (transaction, goalName) => {
-    try {
-      await transactionService.assignGoalToTransaction(transaction.id, goalName);
-      // Refresh dashboard data to update goals and budgets
+  const handleSaveSavingsGoal = async (result) => {
+    if (result?.matched) {
       fetchSummary();
-      console.log(`Goal "${goalName}" assigned to transaction`);
-    } catch (error) {
-      console.error('Error assigning goal:', error);
     }
   };
 
@@ -147,7 +129,7 @@ const Dashboard = () => {
     <div className="dashboard-container">
 
       {/* APK Download Modal */}
-      <DownloadAPKModal 
+      <DownloadAPKModal
         isOpen={showAPKModal}
         onClose={handleCloseAPKModal}
         userName={firstName}
@@ -245,7 +227,6 @@ const Dashboard = () => {
 
       {/* ── Main grid ── */}
       <div className="dashboard-grid">
-
         <div className="grid-column">
           <div className="chart-card">
             <div className="card-header">
@@ -296,7 +277,6 @@ const Dashboard = () => {
             <Goals />
           </div>
         </div>
-
       </div>
     </div>
   );
