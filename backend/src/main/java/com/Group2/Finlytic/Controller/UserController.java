@@ -40,21 +40,25 @@ public class UserController {
     public ResponseEntity<Map<String, Object>> updateProfile(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody Map<String, String> body) {
-        User updated = userService.updateProfile(
-                userDetails.getUserId(),
-                body.get("firstName"),
-                body.get("lastName"),
-                body.get("phoneNumber"),
-                body.get("profilePhoto")
-        );
-        return ResponseEntity.ok(Map.of(
-                "userId",       updated.getUserId(),
-                "firstName",    updated.getFirstName(),
-                "lastName",     updated.getLastName(),
-                "email",        updated.getEmail(),
-                "phoneNumber",  updated.getPhoneNumber() != null ? updated.getPhoneNumber() : "",
-                "profilePhoto", updated.getProfilePhoto() != null ? updated.getProfilePhoto() : ""
-        ));
+        try {
+            User updated = userService.updateProfile(
+                    userDetails.getUserId(),
+                    body.get("firstName"),
+                    body.get("lastName"),
+                    body.get("phoneNumber"),
+                    body.get("profilePhoto")
+            );
+            return ResponseEntity.ok(Map.of(
+                    "userId",       updated.getUserId(),
+                    "firstName",    updated.getFirstName(),
+                    "lastName",     updated.getLastName(),
+                    "email",        updated.getEmail(),
+                    "phoneNumber",  updated.getPhoneNumber() != null ? updated.getPhoneNumber() : "",
+                    "profilePhoto", updated.getProfilePhoto() != null ? updated.getProfilePhoto() : ""
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     // ── Change password ───────────────────────────────────────────────────────
