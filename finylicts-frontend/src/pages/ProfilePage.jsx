@@ -22,21 +22,21 @@ const ProfilePage = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
-  useEffect(() => {
-    if (user) {
-      const userProfile = {
-        name: user.name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        location: user.location || '',
-        bio: user.bio || '',
-        joinDate: user.joinDate || new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
-        avatar: user.avatar || null
-      };
-      setProfileData(userProfile);
-      setOriginalData(userProfile);
-    }
-  }, [user]);
+useEffect(() => {
+  if (user) {
+    const userProfile = {
+      name:     user.name     || '',
+      email:    user.email    || '',
+      phone:    user.phone    || user.phoneNumber || '',
+      location: user.location || '',
+      bio:      user.bio      || '',
+      joinDate: user.joinDate || new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
+      avatar:   user.photo    || user.avatar || null,
+    };
+    setProfileData(userProfile);
+    setOriginalData(userProfile);
+  }
+}, [user]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
