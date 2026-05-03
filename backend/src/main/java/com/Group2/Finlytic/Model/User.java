@@ -3,6 +3,8 @@ package com.Group2.Finlytic.Model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Data
 @Table(name = "users")
@@ -36,6 +38,16 @@ public class User {
 
     @Column(nullable = true)
     private String provider;
+
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
+
+
+    @Column(name = "encryption_key", length = 512)
+    private String encryptionKey;
 
     private boolean enabled = true;
 
