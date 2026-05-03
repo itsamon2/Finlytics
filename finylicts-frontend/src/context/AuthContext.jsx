@@ -51,10 +51,10 @@ export const AuthProvider = ({ children }) => {
 
       if (res.status === 403) {
         return {
-          success:     false,
-          unverified:  true,
-          email:       data.email || email,
-          error:       data.message || 'Email not verified',
+          success:    false,
+          unverified: true,
+          email:      data.email || email,
+          error:      data.message || 'Email not verified',
         };
       }
 
@@ -142,7 +142,19 @@ export const AuthProvider = ({ children }) => {
         throw new Error(data.error || data.message || 'Failed to update profile');
       }
 
-      const updatedUser = { ...user, ...data };
+      // Normalize backend field names (firstName, lastName, phoneNumber, profilePhoto)
+      // to frontend field names (name, phone, photo)
+      const updatedUser = {
+        ...user,
+        name:   data.firstName && data.lastName
+                  ? `${data.firstName} ${data.lastName}`.trim()
+                  : data.name || user.name,
+        email:  data.email        || user.email,
+        phone:  data.phoneNumber  || user.phone,
+        photo:  data.profilePhoto || profileData.avatar || user.photo,
+        userId: data.userId       || user.userId,
+      };
+
       localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
       setUser(updatedUser);
       localStorage.setItem('profileSettings', JSON.stringify(profileData));
