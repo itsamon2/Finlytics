@@ -3,7 +3,9 @@ package com.Group2.Finlytic.Service;
 import com.Group2.Finlytic.Model.TransactionAnalysis;
 import com.Group2.Finlytic.Model.TransactionIntentResult;
 import com.Group2.Finlytic.Model.Transactions;
+import com.Group2.Finlytic.Model.User;
 import com.Group2.Finlytic.repo.Transactionsrepo;
+import com.Group2.Finlytic.repo.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -32,14 +34,54 @@ public class TransactionsService {
     @Autowired
     private GoalEngineService goalEngineService;
 
+    @Autowired
+    private EncryptionService encryptionService;
+
+    @Autowired
+    private UserRepo userRepo;
+
+    // ── Helper: get user's encryption key ────────────────────────
+    private String getUserEncryptionKey(Long userId) {
+        return userRepo.findById(userId)
+                .map(User::getEncryptionKey)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
     // ── Save transaction (manual entry, no AI needed) ────────────
     public Transactions saveTransaction(Transactions transaction) {
-        if (transaction.getRawMessage() != null && !transaction.getRawMessage().isEmpty()) {
-            TransactionAnalysis analysis = categorizationService.analyze(transaction.getRawMessage());
+        if (transaction.getRawMessage() != null &&
+                !transaction.getRawMessage().isEmpty()) {
+
+            TransactionAnalysis analysis =
+                    categorizationService.analyze(transaction.getRawMessage());
+
             transaction.setCategory(analysis.category());
-            transaction.setType(Transactions.TransactionType.valueOf(analysis.transactionType()));
             transaction.setAmount(analysis.amount());
+
+            // FIX 1: Added .toUpperCase() and try/catch fallback — AI may return
+            //         lowercase type strings which cause IllegalArgumentException.
+            try {
+                transaction.setType(Transactions.TransactionType.valueOf(
+                        analysis.transactionType().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                String raw = transaction.getRawMessage().toLowerCase();
+                transaction.setType(raw.contains("received")
+                        ? Transactions.TransactionType.INCOME
+                        : Transactions.TransactionType.EXPENSE);
+            }
+
+            // Encrypt raw message before saving
+            String encryptionKey = getUserEncryptionKey(transaction.getUserId());
+            transaction.setRawMessage(
+                    encryptionService.encryptMessage(
+                            transaction.getRawMessage(), encryptionKey));
         }
+
+        // Ensure creationDate is always set for date-range queries
+        if (transaction.getCreationDate() == null) {
+            transaction.setCreationDate(LocalDate.now());
+        }
+
         Transactions saved = transactionsRepo.save(transaction);
         budgetManagerService.updateBudgetFromTransaction(saved);
         return saved;
@@ -48,32 +90,36 @@ public class TransactionsService {
     // ── Analyze SMS + save + attempt goal match ───────────────────
     public Map<String, Object> analyzeAndSave(String rawMessage, Long userId) {
 
-        // 1. Duplicate check using existsBy (no need to fetch the full object)
+        // 1. Duplicate check
         String mpesaCode = extractMpesaCode(rawMessage);
-
-        if (mpesaCode != null && transactionsRepo.existsByMpesaCodeAndUserId(mpesaCode, userId)) {
+        if (mpesaCode != null &&
+                transactionsRepo.existsByMpesaCodeAndUserId(mpesaCode, userId)) {
             return Map.of(
                     "duplicate", true,
                     "message",   "Transaction already recorded"
             );
         }
 
-        // 2. Run AI + rule-based intent detection
-        TransactionIntentResult result = intentService.processTransaction(rawMessage, userId);
-        TransactionAnalysis analysis = result.analysis();
+        // 2. Run AI BEFORE encrypting — AI needs plain text
+        TransactionIntentResult result   = intentService.processTransaction(rawMessage, userId);
+        TransactionAnalysis     analysis = result.analysis();
 
-        // 3. Persist the transaction immediately
+        // 3. Encrypt raw message using user's unique key
+        String encryptionKey    = getUserEncryptionKey(userId);
+        String encryptedMessage = encryptionService.encryptMessage(rawMessage, encryptionKey);
+
+        // 4. Persist the transaction with encrypted message
         Transactions tx = new Transactions();
         tx.setUserId(userId);
-        tx.setRawMessage(rawMessage);
+        tx.setRawMessage(encryptedMessage);
         tx.setAmount(analysis.amount());
         tx.setCategory(analysis.category());
         tx.setIntent(analysis.intent());
         tx.setMpesaCode(mpesaCode);
         tx.setType(Transactions.TransactionType.valueOf(
                 analysis.transactionType().toUpperCase()));
+        tx.setCreationDate(LocalDate.now());
 
-        // 4. If a goal was silently matched, stamp it on the transaction
         if (result.matchedGoalId() != null) {
             tx.setGoalId(result.matchedGoalId());
         }
@@ -81,7 +127,7 @@ public class TransactionsService {
         Transactions saved = transactionsRepo.save(tx);
         budgetManagerService.updateBudgetFromTransaction(saved);
 
-        // 5. Build response — tells the APK whether to show a popup
+        // 5. Build response
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("transactionId",          saved.getTransactionId());
         response.put("amount",                 saved.getAmount());
@@ -96,7 +142,7 @@ public class TransactionsService {
         return response;
     }
 
-    // ── Extracts the M-Pesa transaction code from raw SMS ────────
+    // ── Extracts M-Pesa transaction code from raw SMS ─────────────
     private String extractMpesaCode(String rawMessage) {
         if (rawMessage == null) return null;
         java.util.regex.Matcher matcher = java.util.regex.Pattern
@@ -105,18 +151,28 @@ public class TransactionsService {
         return matcher.find() ? matcher.group(1) : null;
     }
 
+    // ── Decrypt helper ────────────────────────────────────────────
+    private void decryptTransaction(Transactions tx, String encryptionKey) {
+        if (tx.getRawMessage() == null) return;
+        try {
+            tx.setRawMessage(
+                    encryptionService.decryptMessage(tx.getRawMessage(), encryptionKey)
+            );
+        } catch (Exception e) {
+            // Old unencrypted record — leave as is
+        }
+    }
+
     // ── Assign goal after user answers "what are you saving for?" ─
     public Map<String, Object> assignGoalToTransaction(Long transactionId,
                                                        Long userId,
                                                        String goalHint) {
 
-        // 1. Verify the transaction belongs to this user
         Transactions tx = transactionsRepo
                 .findByTransactionIdAndUserId(transactionId, userId)
                 .orElseThrow(() -> new RuntimeException(
                         "Transaction not found or access denied"));
 
-        // 2. Try to match an active goal using the user's hint
         Long matchedGoalId = goalEngineService.processSaving(
                 userId, tx.getAmount(), goalHint);
 
@@ -125,11 +181,11 @@ public class TransactionsService {
         if (matchedGoalId == null) {
             response.put("matched", false);
             response.put("message",
-                    "No active goal matched '" + goalHint + "'. Would you like to create one?");
+                    "No active goal matched '" + goalHint +
+                            "'. Would you like to create one?");
         } else {
             tx.setGoalId(matchedGoalId);
             transactionsRepo.save(tx);
-
             response.put("matched",       true);
             response.put("matchedGoalId", matchedGoalId);
             response.put("message",       "Contribution recorded successfully.");
@@ -138,19 +194,36 @@ public class TransactionsService {
         return response;
     }
 
-    // ── Fetch all transactions for a user ─────────────────────────
+    // ── Fetch all — decrypt for this user ─────────────────────────
     public List<Transactions> getTransactionsByUserId(Long userId) {
-        return transactionsRepo.findByUserId(userId);
+        String encryptionKey = getUserEncryptionKey(userId);
+        return transactionsRepo.findByUserId(userId)
+                .stream()
+                .peek(tx -> decryptTransaction(tx, encryptionKey))
+                .toList();
     }
 
+    // ── Fetch single — decrypt for this user ──────────────────────
     public Optional<Transactions> getTransactionByIdAndUserId(Long id, Long userId) {
-        return transactionsRepo.findByTransactionIdAndUserId(id, userId);
+        String encryptionKey = getUserEncryptionKey(userId);
+        return transactionsRepo.findByTransactionIdAndUserId(id, userId)
+                .map(tx -> {
+                    decryptTransaction(tx, encryptionKey);
+                    return tx;
+                });
     }
 
-    public List<Transactions> getTransactionsByCategoryAndUserId(String category, Long userId) {
-        return transactionsRepo.findByCategoryAndUserId(category, userId);
+    // ── Fetch by category — decrypt for this user ─────────────────
+    public List<Transactions> getTransactionsByCategoryAndUserId(
+            String category, Long userId) {
+        String encryptionKey = getUserEncryptionKey(userId);
+        return transactionsRepo.findByCategoryAndUserId(category, userId)
+                .stream()
+                .peek(tx -> decryptTransaction(tx, encryptionKey))
+                .toList();
     }
 
+    // ── Monthly income ────────────────────────────────────────────
     public BigDecimal getMonthlyIncome(Long userId) {
         LocalDate start = LocalDate.now().withDayOfMonth(1);
         LocalDate end   = start.plusMonths(1);
@@ -159,6 +232,7 @@ public class TransactionsService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    // ── Monthly expenses by category ──────────────────────────────
     public Map<String, BigDecimal> getMonthlyExpensesByCategory(Long userId) {
         LocalDate start = LocalDate.now().withDayOfMonth(1);
         LocalDate end   = start.plusMonths(1);
@@ -171,6 +245,7 @@ public class TransactionsService {
                 ));
     }
 
+    // ── Total balance ─────────────────────────────────────────────
     public BigDecimal getTotalBalance(Long userId) {
         BigDecimal totalIncome = transactionsRepo.findAllIncome(userId).stream()
                 .map(Transactions::getAmount)
@@ -181,6 +256,7 @@ public class TransactionsService {
         return totalIncome.subtract(totalExpenses);
     }
 
+    // ── Last month income ─────────────────────────────────────────
     public BigDecimal getLastMonthIncome(Long userId) {
         LocalDate start = LocalDate.now().minusMonths(1).withDayOfMonth(1);
         LocalDate end   = LocalDate.now().withDayOfMonth(1);
@@ -189,6 +265,7 @@ public class TransactionsService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    // ── Last month expenses ───────────────────────────────────────
     public BigDecimal getLastMonthExpenses(Long userId) {
         LocalDate start = LocalDate.now().minusMonths(1).withDayOfMonth(1);
         LocalDate end   = LocalDate.now().withDayOfMonth(1);
@@ -197,20 +274,31 @@ public class TransactionsService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public List<Transactions> getTransactionsByMonth(Long userId, int month, int year) {
-        LocalDate start = LocalDate.of(year, month, 1);
-        LocalDate end   = start.plusMonths(1);
-        return transactionsRepo.findByMonthAndYear(userId, start, end);
+    // ── By month/year ─────────────────────────────────────────────
+    public List<Transactions> getTransactionsByMonth(Long userId,
+                                                     int month, int year) {
+        LocalDate start      = LocalDate.of(year, month, 1);
+        LocalDate end        = start.plusMonths(1);
+        String encryptionKey = getUserEncryptionKey(userId);
+        return transactionsRepo.findByMonthAndYear(userId, start, end)
+                .stream()
+                .peek(tx -> decryptTransaction(tx, encryptionKey))
+                .toList();
     }
 
+    // ── Monthly cashflow ──────────────────────────────────────────
     public List<Map<String, Object>> getMonthlyCashflow(Long userId) {
-        List<Transactions> transactions = transactionsRepo.findLast12MonthsTransactions(
-                userId, LocalDate.now().minusMonths(12));
+        List<Transactions> transactions = transactionsRepo
+                .findLast12MonthsTransactions(
+                        userId, LocalDate.now().minusMonths(12));
 
         Map<String, BigDecimal> incomeByMonth  = new LinkedHashMap<>();
         Map<String, BigDecimal> expenseByMonth = new LinkedHashMap<>();
 
         transactions.forEach(t -> {
+            // FIX 2: Null-guard on creationDate to avoid NPE on legacy records
+            if (t.getCreationDate() == null) return;
+
             String key = t.getCreationDate()
                     .getMonth()
                     .getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
@@ -236,10 +324,11 @@ public class TransactionsService {
         }).collect(Collectors.toList());
     }
 
+    // ── Dashboard summary ─────────────────────────────────────────
     public Map<String, Object> getDashboardSummary(Long userId) {
         BigDecimal thisMonthIncome   = getMonthlyIncome(userId);
-        BigDecimal thisMonthExpenses = getMonthlyExpensesByCategory(userId).values()
-                .stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal thisMonthExpenses = getMonthlyExpensesByCategory(userId)
+                .values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal lastMonthIncome   = getLastMonthIncome(userId);
         BigDecimal lastMonthExpenses = getLastMonthExpenses(userId);
         BigDecimal totalBalance      = getTotalBalance(userId);
@@ -250,7 +339,7 @@ public class TransactionsService {
                 .multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
-        BigDecimal incomeTrend  = calculateTrend(lastMonthIncome, thisMonthIncome);
+        BigDecimal incomeTrend  = calculateTrend(lastMonthIncome,  thisMonthIncome);
         BigDecimal expenseTrend = calculateTrend(lastMonthExpenses, thisMonthExpenses);
         BigDecimal balanceTrend = calculateTrend(
                 lastMonthIncome.subtract(lastMonthExpenses),
@@ -267,6 +356,7 @@ public class TransactionsService {
         return summary;
     }
 
+    // ── Delete ────────────────────────────────────────────────────
     public void deleteTransactionByIdAndUserId(Long id, Long userId) {
         Transactions transaction = transactionsRepo
                 .findByTransactionIdAndUserId(id, userId)
@@ -275,6 +365,7 @@ public class TransactionsService {
         transactionsRepo.delete(transaction);
     }
 
+    // ── Trend calculator ──────────────────────────────────────────
     private BigDecimal calculateTrend(BigDecimal previous, BigDecimal current) {
         if (previous == null || previous.compareTo(BigDecimal.ZERO) == 0)
             return BigDecimal.ZERO;

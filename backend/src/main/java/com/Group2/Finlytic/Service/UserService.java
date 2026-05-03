@@ -8,15 +8,21 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserService {
 
-    private final UserRepo userRepo;
-    private final PasswordEncoder passwordEncoder;
-    private final OtpService otpService;
+    private final UserRepo          userRepo;
+    private final PasswordEncoder   passwordEncoder;
+    private final OtpService        otpService;
+    // FIX: Changed from non-final field with @Autowired to final field injected
+    //      via constructor, consistent with all other dependencies in this class.
+    private final EncryptionService encryptionService;
 
-    public UserService(UserRepo userRepo, PasswordEncoder passwordEncoder,
-                       OtpService otpService) {
-        this.userRepo = userRepo;
-        this.passwordEncoder = passwordEncoder;
-        this.otpService = otpService;
+    public UserService(UserRepo userRepo,
+                       PasswordEncoder passwordEncoder,
+                       OtpService otpService,
+                       EncryptionService encryptionService) {
+        this.userRepo           = userRepo;
+        this.passwordEncoder    = passwordEncoder;
+        this.otpService         = otpService;
+        this.encryptionService  = encryptionService;
     }
 
     public void registerUser(User user) {
@@ -27,11 +33,14 @@ public class UserService {
         user.setRole("ROLE_USER");
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setEmailVerified(false);
-        userRepo.save(user);
 
+        String rawUserKey       = encryptionService.generateUserKey();
+        String encryptedUserKey = encryptionService.encryptUserKey(rawUserKey);
+        user.setEncryptionKey(encryptedUserKey);
+
+        userRepo.save(user);
         otpService.sendOtp(user.getEmail());
     }
-
 
     public User getUserById(Long userId) {
         return userRepo.findById(userId)

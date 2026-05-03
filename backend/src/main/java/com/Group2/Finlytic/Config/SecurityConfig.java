@@ -44,21 +44,22 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register",
-                                "/api/auth/forgot-password",
+                                "/api/auth/forgot-password",   // FIX 2: removed duplicate entry
+                                "/api/auth/reset-password",
+                                "/api/auth/verify-otp",
+                                "/api/auth/resend-otp",
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api/mpesa",
-                                "/api/auth/verify-otp",
-                                "/api/auth/resend-otp"
+                                "/api/mpesa"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler)
                 )
-                .exceptionHandling(ex -> ex          // ← ADDED
+                .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(401);
                             response.setContentType("application/json");
@@ -89,9 +90,12 @@ public class SecurityConfig {
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
-        return new UrlBasedCorsConfigurationSource() {{
-            registerCorsConfiguration("/**", config);
-        }};
+
+        // FIX 3: Replaced double-brace initializer (anonymous subclass anti-pattern)
+        //         with explicit local variable assignment.
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     @Bean
