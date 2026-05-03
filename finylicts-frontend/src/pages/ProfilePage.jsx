@@ -20,8 +20,8 @@ const ProfilePage = () => {
   const [originalData, setOriginalData] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
-  // Load user data from auth context
   useEffect(() => {
     if (user) {
       const userProfile = {
@@ -33,13 +33,11 @@ const ProfilePage = () => {
         joinDate: user.joinDate || new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
         avatar: user.avatar || null
       };
-      
       setProfileData(userProfile);
       setOriginalData(userProfile);
     }
   }, [user]);
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -85,22 +83,26 @@ const ProfilePage = () => {
   const handleSave = async () => {
     setIsLoading(true);
     setSaveSuccess(false);
-    
+    setSaveError(null);
+
     const result = await updateProfile(profileData);
-    
+
     if (result.success) {
       setOriginalData(profileData);
       setIsEditing(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+    } else {
+      setSaveError(result.error || 'Failed to update profile. Please try again.');
     }
-    
+
     setIsLoading(false);
   };
 
   const handleCancel = () => {
     setProfileData(originalData);
     setIsEditing(false);
+    setSaveError(null);
   };
 
   const getInitials = () => {
@@ -119,7 +121,7 @@ const ProfilePage = () => {
         <p className="profile-subtitle">Manage your personal information</p>
       </div>
 
-      <motion.div 
+      <motion.div
         className="profile-container"
         variants={containerVariants}
         initial="hidden"
@@ -193,7 +195,7 @@ const ProfilePage = () => {
             <div className="card-header">
               <h2>Personal Information</h2>
               {!isEditing ? (
-                <button 
+                <button
                   className="edit-button"
                   onClick={() => setIsEditing(true)}
                 >
@@ -201,14 +203,14 @@ const ProfilePage = () => {
                 </button>
               ) : (
                 <div className="edit-actions">
-                  <button 
+                  <button
                     className="cancel-button"
                     onClick={handleCancel}
                     disabled={isLoading}
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     className={`save-button ${isLoading ? 'loading' : ''}`}
                     onClick={handleSave}
                     disabled={isLoading}
@@ -220,13 +222,24 @@ const ProfilePage = () => {
             </div>
 
             {saveSuccess && (
-              <motion.div 
+              <motion.div
                 className="success-message"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
               >
                 ✓ Profile updated successfully!
+              </motion.div>
+            )}
+
+            {saveError && (
+              <motion.div
+                className="error-message"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+              >
+                ✕ {saveError}
               </motion.div>
             )}
 
@@ -283,7 +296,7 @@ const ProfilePage = () => {
                     name="phone"
                     value={profileData.phone}
                     onChange={handleInputChange}
-                    placeholder="Enter your phone number"
+                    placeholder="+254XXXXXXXXX"
                     className="form-input"
                   />
                 ) : (
