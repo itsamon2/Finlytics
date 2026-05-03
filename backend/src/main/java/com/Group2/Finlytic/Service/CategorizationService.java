@@ -40,9 +40,9 @@ public class CategorizationService {
        - Use INCOME if money was received
        - Use LOAN for bank loans, loan repayments, credit payments, Fuliza, M-Shwari
        - Use OTHER for anything that doesn't fit above
-    2. transactionType: EXACTLY one of INCOME or EXPENSE
-       - Use INCOME if money was received
-       - Use EXPENSE if money was sent or paid
+    2. transactionType: EXACTLY one of INCOME or EXPENSE — never any other value
+       - INCOME if money was received into your account
+       - EXPENSE if money was sent, paid, or withdrawn
     3. amount: Extract the transaction amount as a number only, no currency symbols or commas
        - Example: "Ksh1,250.00" should be extracted as 1250.00
     {format}

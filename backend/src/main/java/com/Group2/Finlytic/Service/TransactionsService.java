@@ -30,8 +30,18 @@ public class TransactionsService {
         if (transaction.getRawMessage() != null && !transaction.getRawMessage().isEmpty()) {
             TransactionAnalysis analysis = categorizationService.analyze(transaction.getRawMessage());
             transaction.setCategory(analysis.category());
-            transaction.setType(Transactions.TransactionType.valueOf(analysis.transactionType()));
             transaction.setAmount(analysis.amount());
+
+            // Safe enum parsing with fallback
+            try {
+                transaction.setType(Transactions.TransactionType.valueOf(analysis.transactionType()));
+            } catch (IllegalArgumentException e) {
+                // AI returned something unexpected, infer from message
+                String raw = transaction.getRawMessage().toLowerCase();
+                transaction.setType(raw.contains("received")
+                        ? Transactions.TransactionType.INCOME
+                        : Transactions.TransactionType.EXPENSE);
+            }
         }
         Transactions saved = transactionsRepo.save(transaction);
         budgetManagerService.updateBudgetFromTransaction(saved);
