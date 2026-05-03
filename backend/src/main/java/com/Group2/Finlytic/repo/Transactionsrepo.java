@@ -9,6 +9,8 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface Transactionsrepo extends JpaRepository<Transactions, Long> {
 
@@ -37,6 +39,10 @@ public interface Transactionsrepo extends JpaRepository<Transactions, Long> {
             @Param("start") LocalDate start,
             @Param("end") LocalDate end
     );
+
+
+    Optional<Transactions> findByMpesaCodeAndUserId(String mpesaCode, Long userId);
+
 
     @Query("""
         SELECT t FROM Transactions t

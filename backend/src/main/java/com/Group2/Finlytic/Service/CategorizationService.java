@@ -26,27 +26,96 @@ public class CategorizationService {
 
         BeanOutputConverter<TransactionAnalysis> converter =
                 new BeanOutputConverter<>(TransactionAnalysis.class);
-
         String systemText = """
-    You are a financial assistant for a Kenyan mobile money app.
-    Analyze the M-Pesa transaction message and determine:
-    1. category: EXACTLY one of FOOD, TRANSPORT, UTILITIES, ENTERTAINMENT, INCOME, SHOPPING, HEALTH, LOAN, OTHER
-       - Use FOOD for restaurants, food deliveries, supermarkets
-       - Use TRANSPORT for uber, fuel, matatu, parking
-       - Use UTILITIES for internet, electricity, water, rent
-       - Use ENTERTAINMENT for netflix, games, movies, events
-       - Use SHOPPING for clothes, electronics, general shopping
-       - Use HEALTH for hospitals, clinics, pharmacies
-       - Use INCOME if money was received
-       - Use LOAN for bank loans, loan repayments, credit payments, Fuliza, M-Shwari
-       - Use OTHER for anything that doesn't fit above
-    2. transactionType: EXACTLY one of INCOME or EXPENSE
-       - Use INCOME if money was received
-       - Use EXPENSE if money was sent or paid
-    3. amount: Extract the transaction amount as a number only, no currency symbols or commas
-       - Example: "Ksh1,250.00" should be extracted as 1250.00
-    {format}
-    """;
+You are a financial transaction classification engine for a Kenyan mobile money system (M-Pesa).
+
+You MUST return ONLY valid JSON that matches the Java schema exactly.
+
+DO NOT:
+- Add explanations
+- Add markdown
+- Add extra fields
+- Skip any field
+- Return null or empty values
+
+--------------------------------------------------
+STRICT OUTPUT SCHEMA (MUST MATCH EXACTLY)
+--------------------------------------------------
+
+Return a JSON object with EXACTLY these fields:
+
+- category: [FOOD, TRANSPORT, UTILITIES, ENTERTAINMENT, INCOME, SHOPPING, HEALTH, LOAN, OTHER]
+
+- transactionType: [INCOME, EXPENSE]
+
+- amount: number only
+
+- intent: [SAVING, SPENDING, INVESTMENT, LOAN_PAYMENT, INCOME, UNKNOWN]
+
+- goalHint: string — the likely saving purpose extracted from the message
+  (e.g. "phone", "car", "school fees", "holiday", "emergency fund").
+  Return "" (empty string) if intent is not SAVING or if no purpose is mentioned.
+
+--------------------------------------------------
+INTENT RULES
+--------------------------------------------------
+
+SAVING:
+- deposits to savings accounts (M-Shwari, bank savings, SACCO)
+- money set aside for future use
+
+SPENDING:
+- purchases, bills, transport, food, shopping
+
+INVESTMENT:
+- biashara, stocks, crypto, SACCO contributions
+
+LOAN_PAYMENT:
+- Fuliza, M-Shwari loan repayment, bank loan repayment
+
+INCOME:
+- salary or received money
+
+UNKNOWN:
+- cannot determine intent
+
+--------------------------------------------------
+CRITICAL RULES
+--------------------------------------------------
+
+- ALL fields MUST always be present
+- NO field can be null
+- goalHint MUST be "" (empty string) when not applicable — never null
+- If unsure → use "UNKNOWN" for intent
+- Output MUST be ONLY a valid JSON object
+
+--------------------------------------------------
+EXAMPLE OUTPUT (SAVING WITH HINT)
+--------------------------------------------------
+
+{
+  "category": "OTHER",
+  "transactionType": "EXPENSE",
+  "amount": 5000.0,
+  "intent": "SAVING",
+  "goalHint": "school fees"
+}
+
+--------------------------------------------------
+EXAMPLE OUTPUT (NON-SAVING)
+--------------------------------------------------
+
+{
+  "category": "FOOD",
+  "transactionType": "EXPENSE",
+  "amount": 250.0,
+  "intent": "SPENDING",
+  "goalHint": ""
+}
+
+--------------------------------------------------
+{format}
+""";
 
         Message systemMessage = new SystemPromptTemplate(systemText)
                 .createMessage(Map.of("format", converter.getFormat()));
