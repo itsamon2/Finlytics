@@ -26,7 +26,6 @@ public class CategorizationService {
 
         BeanOutputConverter<TransactionAnalysis> converter =
                 new BeanOutputConverter<>(TransactionAnalysis.class);
-
         String systemText = """
     You are a financial assistant for a Kenyan mobile money app.
     Analyze the M-Pesa transaction message and determine:

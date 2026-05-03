@@ -3,10 +3,8 @@ package com.Group2.Finlytic.Model;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Date;
 @Entity
 @Data
 @Table(name = "income_profile")
