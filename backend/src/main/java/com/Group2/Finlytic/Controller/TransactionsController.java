@@ -3,13 +3,13 @@ package com.Group2.Finlytic.Controller;
 import com.Group2.Finlytic.Model.Transactions;
 import com.Group2.Finlytic.Service.TransactionsService;
 import com.Group2.Finlytic.Service.CustomUserDetails;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/transactions")
@@ -36,7 +36,6 @@ public class TransactionsController {
     public Map<String, Object> analyzeTransaction(
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-
         String rawMessage = body.get("rawMessage");
         return transactionsService.analyzeAndSave(rawMessage, userDetails.getUserId());
     }
@@ -48,7 +47,6 @@ public class TransactionsController {
             @PathVariable("id") Long transactionId,
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-
         String goalHint = body.get("goalHint");
         return transactionsService.assignGoalToTransaction(
                 transactionId, userDetails.getUserId(), goalHint);
@@ -62,11 +60,17 @@ public class TransactionsController {
     }
 
     // ── GET BY ID ───────────────────────────────────────────
+    // FIX 1: Was returning Optional<Transactions> directly — Spring serialized
+    //         an empty Optional as 200 OK with no body instead of 404.
+    //         Now properly returns 404 when the transaction is not found.
     @GetMapping("/{id}")
-    public Optional<Transactions> getTransaction(
+    public ResponseEntity<Transactions> getTransaction(
             @PathVariable("id") Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        return transactionsService.getTransactionByIdAndUserId(id, userDetails.getUserId());
+        return transactionsService
+                .getTransactionByIdAndUserId(id, userDetails.getUserId())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // ── GET BY CATEGORY ─────────────────────────────────────
@@ -74,7 +78,8 @@ public class TransactionsController {
     public List<Transactions> getTransactionsByCategory(
             @PathVariable("category") String category,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        return transactionsService.getTransactionsByCategoryAndUserId(category, userDetails.getUserId());
+        return transactionsService.getTransactionsByCategoryAndUserId(
+                category, userDetails.getUserId());
     }
 
     // ── DASHBOARD SUMMARY ───────────────────────────────────
@@ -108,11 +113,17 @@ public class TransactionsController {
                 userDetails.getUserId(), month, year);
     }
 
-    // ── DELETE ─────────────────────────────────────────────
     @DeleteMapping("/{id}")
-    public void deleteTransaction(
+    public ResponseEntity<Map<String, Object>> deleteTransaction(
             @PathVariable("id") Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        transactionsService.deleteTransactionByIdAndUserId(id, userDetails.getUserId());
+        try {
+            transactionsService.deleteTransactionByIdAndUserId(id, userDetails.getUserId());
+            return ResponseEntity.ok(
+                    Map.of("success", true, "message", "Transaction deleted successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(
+                    Map.of("success", false, "message", e.getMessage()));
+        }
     }
 }

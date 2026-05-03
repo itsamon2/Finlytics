@@ -10,6 +10,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';   // ← ADD
 import OAuthCallback from './pages/OAuthCallback';
 import TransactionsPage from './pages/TransactionsPage';
 import BudgetsPage from './pages/BudgetsPage';
@@ -22,8 +23,8 @@ import SettingsPage from './pages/SettingsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ReportsPage from './pages/ReportsPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
-import TermsPage from './pages/TermsPage';       // ✅ NEW
-import PrivacyPage from './pages/PrivacyPage';   // ✅ NEW
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
 import './App.css';
 
 const AnalysisPage = () => <div className="content-area"><h1>Analysis Page</h1><p>Coming soon...</p></div>;
@@ -39,17 +40,16 @@ function App() {
             <Route path="/" element={<LandingPage />} />
 
             {/* ── Static public pages ── */}
-            <Route path="/terms"           element={<TermsPage />} />
-            <Route path="/privacy"         element={<PrivacyPage />} />
+            <Route path="/terms"   element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
 
             {/* ── Public auth routes ── */}
             <Route path="/login"           element={<LoginPage />} />
             <Route path="/register"        element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password"  element={<ResetPasswordPage />} />  {/* ← ADD */}
             <Route path="/auth/callback"   element={<OAuthCallback />} />
             <Route path="/verify-otp"      element={<VerifyOtpPage />} />
-            <Route path="terms"                 element={<TermsPage />} />
-            <Route path="privacy"        element={<PrivacyPage />} />
 
             {/* ── Protected routes ── */}
             <Route path="/dashboard" element={
@@ -78,7 +78,6 @@ function App() {
               <Route path="tax-health"            element={<TaxHealthPageWrapper />} />
               <Route path="settings"              element={<SettingsPage />} />
               <Route path="notifications"         element={<NotificationsPage />} />
-              
             </Route>
 
             {/* ── Fallback ── */}
