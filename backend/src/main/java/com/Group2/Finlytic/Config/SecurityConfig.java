@@ -91,8 +91,6 @@ public class SecurityConfig {
         config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
 
-        // FIX 3: Replaced double-brace initializer (anonymous subclass anti-pattern)
-        //         with explicit local variable assignment.
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
