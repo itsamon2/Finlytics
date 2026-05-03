@@ -2,6 +2,16 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const TOKEN_KEY = 'auth_token';
 
+// ADD THIS AT THE TOP TEMPORARILY
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  const response = await originalFetch(...args);
+  if (response.status === 401) {
+    console.error('🔴 401 on:', args[0]);
+  }
+  return response;
+};
+
 // ── Base request helper ──────────────────────────────────────────────────────
 const request = async (endpoint, options = {}) => {
   const token = localStorage.getItem(TOKEN_KEY);
@@ -19,9 +29,11 @@ const request = async (endpoint, options = {}) => {
   });
 
   if (response.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem('auth_user');
-    window.location.href = '/login';
+    if (token) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('auth_user');
+      window.location.href = '/login';
+    }
     return;
   }
 
@@ -46,9 +58,11 @@ const requestText = async (endpoint) => {
   });
 
   if (response.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem('auth_user');
-    window.location.href = '/login';
+    if (token) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('auth_user');
+      window.location.href = '/login';
+    }
     return;
   }
 
@@ -62,89 +76,88 @@ const requestText = async (endpoint) => {
 
 // ── Services ─────────────────────────────────────────────────────────────────
 export const transactionService = {
-  getAll:        ()         => request('/transactions'),
-  getById:       (id)       => request(`/transactions/${id}`),
-  getByCategory: (category) => request(`/transactions/category/${category}`),
-  delete:        (id)       => request(`/transactions/${id}`, { method: 'DELETE' }),
-  getSummary:          ()   => request('/transactions/summary'),
+  getAll:                () => request('/transactions'),
+  getById:               (id) => request(`/transactions/${id}`),
+  getByCategory:         (category) => request(`/transactions/category/${category}`),
+  delete:                (id) => request(`/transactions/${id}`, { method: 'DELETE' }),
+  getSummary:            () => request('/transactions/summary'),
   getCashflow:           () => request('/transactions/cashflow'),
   getExpensesByCategory: () => request('/transactions/expenses/category'),
-  getByMonth: (month, year) => request(`/transactions/by-month?month=${month}&year=${year}`),
-  
-  // ── NEW: Get recent transactions for savings prompt ─────────────────────────
-  getRecent: (limit = 10) => request(`/transactions/recent?limit=${limit}`),
-  
-  // ── NEW: Assign goal to transaction (for M-Shwari/ZIDII savings) ────────────
-  assignGoalToTransaction: (transactionId, goalName) => 
-    request(`/transactions/${transactionId}/assign-goal`, { 
-      method: 'PUT', 
-      body: { goalName } 
+  getByMonth:            (month, year) => request(`/transactions/by-month?month=${month}&year=${year}`),
+  getRecent:             (limit = 10) => request(`/transactions/recent?limit=${limit}`),
+
+  analyze: (rawMessage) =>
+    request('/transactions/analyze', {
+      method: 'POST',
+      body: { rawMessage },
+    }),
+
+  assignGoalToTransaction: (transactionId, goalHint) =>
+    request(`/transactions/${transactionId}/assign-goal`, {
+      method: 'POST',
+      body: { goalHint },
     }),
 };
 
 export const budgetService = {
-  getAll:         ()           => request('/budgets'),
-  getById:        (id)         => request(`/budgets/${id}`),
-  create:         (budget)     => request('/budgets',             { method: 'POST',  body: budget }),
-  update:         (id, budget) => request(`/budgets/${id}`,       { method: 'PUT',   body: budget }),
+  getAll:         () => request('/budgets'),
+  getById:        (id) => request(`/budgets/${id}`),
+  create:         (budget) => request('/budgets', { method: 'POST', body: budget }),
+  update:         (id, budget) => request(`/budgets/${id}`, { method: 'PUT', body: budget }),
   updateSpending: (id, amount) => request(`/budgets/${id}/spend?amount=${amount}`, { method: 'PATCH' }),
-  isExceeded:     (id)         => request(`/budgets/${id}/exceeded`),
-  delete:         (id)         => request(`/budgets/${id}`,       { method: 'DELETE' }),
-  checkRollover:   ()                    => request('/budgets/check-rollover'),
-  rollover:(continueWithSame)  => request(`/budgets/rollover?continue=${continueWithSame}`, { method: 'POST' }),
-  getByMonth:(month, year)     => request(`/budgets/by-month?month=${month}&year=${year}`),
+  isExceeded:     (id) => request(`/budgets/${id}/exceeded`),
+  delete:         (id) => request(`/budgets/${id}`, { method: 'DELETE' }),
+  checkRollover:  () => request('/budgets/check-rollover'),
+  rollover:       (continueWithSame) => request(`/budgets/rollover?continue=${continueWithSame}`, { method: 'POST' }),
+  getByMonth:     (month, year) => request(`/budgets/by-month?month=${month}&year=${year}`),
 };
 
 export const goalsService = {
-  getAll:         ()            => request('/goals'),
-  getById:        (id)          => request(`/goals/${id}`),
-  create:         (goal)        => request('/goals',              { method: 'POST', body: goal }),
-  update:         (goal)        => request('/goals',              { method: 'PUT',  body: goal }),
-  updateStatus:   (id, status)  => request(`/goals/id/${id}/status?status=${status}`, { method: 'PATCH' }),
-  search:         (name)        => request(`/goals/search?goal_name=${encodeURIComponent(name)}`),
-  delete:         (id)          => request(`/goals/${id}`,        { method: 'DELETE' }),
-  getFeasibility: (id)          => requestText(`/goals/${id}/feasibility`),
-  getAdvisory:    (id)          => requestText(`/goals/${id}/advisory`),
-
-  getDueCheckIns: () => request('/goals/due-checkins'),
-  confirmContribution: (id, amount) =>
-    request(`/goals/${id}/contribute?amount=${amount}`, { method: 'POST' }),
-  rescheduleContribution: (id, newDate) =>
-    request(`/goals/${id}/reschedule?newDate=${newDate}`, { method: 'POST' }),
-  updateFrequency: (id, value, unit) =>
-    request(`/goals/${id}/frequency?value=${value}&unit=${unit}`, { method: 'POST' }),
+  getAll:                  () => request('/goals'),
+  getById:                 (id) => request(`/goals/${id}`),
+  create:                  (goal) => request('/goals', { method: 'POST', body: goal }),
+  update:                  (goal) => request('/goals', { method: 'PUT', body: goal }),
+  updateStatus:            (id, status) => request(`/goals/id/${id}/status?status=${status}`, { method: 'PATCH' }),
+  search:                  (name) => request(`/goals/search?goal_name=${encodeURIComponent(name)}`),
+  delete:                  (id) => request(`/goals/${id}`, { method: 'DELETE' }),
+  getFeasibility:          (id) => requestText(`/goals/${id}/feasibility`),
+  getAdvisory:             (id) => requestText(`/goals/${id}/advisory`),
+  getDueCheckIns:          () => request('/goals/due-checkins'),
+  confirmContribution:     (id, amount) => request(`/goals/${id}/contribute?amount=${amount}`, { method: 'POST' }),
+  rescheduleContribution:  (id, newDate) => request(`/goals/${id}/reschedule?newDate=${newDate}`, { method: 'POST' }),
+  updateFrequency:         (id, value, unit) => request(`/goals/${id}/frequency?value=${value}&unit=${unit}`, { method: 'POST' }),
   getNextContributionDate: (id) => request(`/goals/${id}/next-contribution`),
 };
 
 export const notificationService = {
-  getAll:        () => request('/notifications'),
-  getLatest:     () => request('/notifications/latest'),
+  getAll:         () => request('/notifications'),
+  getLatest:      () => request('/notifications/latest'),
   getUnreadCount: () => request('/notifications/unread-count'),
-  markAsRead:    (id) => request(`/notifications/${id}/read`, { method: 'PATCH' }),
-  markAllAsRead: () => request('/notifications/read-all', { method: 'PATCH' }),
+  markAsRead:     (id) => request(`/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllAsRead:  () => request('/notifications/read-all', { method: 'PATCH' }),
 };
 
 export const userService = {
-    getProfile:      ()       => request('/user/profile'),
-    updateProfile:   (data)   => request('/user/profile',          { method: 'PUT',    body: data }),
-    changePassword:  (data)   => request('/user/change-password',  { method: 'PUT',    body: data }),
-    deleteAccount:   ()       => request('/user/account',          { method: 'DELETE' }),
+  getProfile:     () => request('/user/profile'),
+  updateProfile:  (data) => request('/user/profile', { method: 'PUT', body: data }),
+  changePassword: (data) => request('/user/change-password', { method: 'PUT', body: data }),
+  deleteAccount:  () => request('/user/account', { method: 'DELETE' }),
 };
 
 export const healthService = {
-  getMetrics: () => request('/health'),
+  getMetrics:    () => request('/health'),
   getTaxSummary: () => request('/health/tax'),
 };
 
 export const incomeProfileService = {
-  get:    ()      => request('/income'),
-  create: (data)  => request('/income', { method: 'POST', body: data }),
-  update: (data)  => request('/income', { method: 'PUT',  body: data }),
+  get:    () => request('/income'),
+  create: (data) => request('/income', { method: 'POST', body: data }),
+  update: (data) => request('/income', { method: 'PUT', body: data }),
 };
 
 export const scenarioService = {
-  run:     (data)  => request('/scenarios/run',  { method: 'POST', body: data }),
-  save:    (data)  => request('/scenarios/save', { method: 'POST', body: data }),
-  getAll:  ()      => request('/scenarios'),
-  delete:  (id)    => request(`/scenarios/${id}`, { method: 'DELETE' }),
+  run:    (data) => request('/scenarios/run', { method: 'POST', body: data }),
+  save:   (data) => request('/scenarios/save', { method: 'POST', body: data }),
+  getAll: () => request('/scenarios'),
+  delete: (id) => request(`/scenarios/${id}`, { method: 'DELETE' }),
 };
