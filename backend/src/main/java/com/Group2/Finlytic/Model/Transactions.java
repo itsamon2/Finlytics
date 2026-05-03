@@ -42,7 +42,7 @@ public class Transactions {
     private String description;
 
     @Column(name = "source")
-    private String source; // MPESA, BANK, MANUAL
+    private String source;
 
     @Column(name = "recipient")
     private String recipient;
@@ -53,10 +53,27 @@ public class Transactions {
     @Column(name = "goal_id")
     private Long goalId;
 
+    @Column(name = "is_saving", nullable = false, columnDefinition = "boolean default false")
+    private Boolean isSaving = false;
+
+    @Column(name = "needs_goal_clarification", nullable = false, columnDefinition = "boolean default false")
+    private Boolean needsGoalClarification = false;
+
+    @Column(name = "suggested_goal")
+    private String suggestedGoal;
 
     @CreationTimestamp
     @Column(name = "creation_date", updatable = false)
     private LocalDate creationDate;
+
+    // ── Null-safe getters ──────────────────────────────────────────
+    public boolean isSaving() {
+        return isSaving != null && isSaving;
+    }
+
+    public boolean isNeedsGoalClarification() {
+        return needsGoalClarification != null && needsGoalClarification;
+    }
 
     public enum TransactionType {
         INCOME,

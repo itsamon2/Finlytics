@@ -42,7 +42,7 @@ public class PasswordResetService {
         userRepo.save(user);
 
         // Send email
-        String resetLink = "http://localhost:5173/reset-password?token=" + token;
+        String resetLink = "https://finlytics-steel.vercel.app/reset-password?token=" + token;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);

@@ -2,15 +2,21 @@ import React, { useState, useEffect } from 'react';
 import './Transactions.styles.css';
 import { transactionService } from '../service/api';
 import Loader from '../components/Loader';
+import SavingsPromptModal from '../components/SavingsPromptModal';
 
 const TransactionsPage = () => {
-  const [filter, setFilter]           = useState('all');
-  const [searchTerm, setSearchTerm]   = useState('');
+  const [filter, setFilter]             = useState('all');
+  const [searchTerm, setSearchTerm]     = useState('');
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState(null);
-  const [expandedRow, setExpandedRow] = useState(null);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(null);
+  const [expandedRow, setExpandedRow]   = useState(null);
   const [allTimeIncome, setAllTimeIncome] = useState(0);
+
+  const [savingsModal, setSavingsModal] = useState({
+    isOpen: false,
+    transactionData: null,
+  });
 
   const now = new Date();
   const [currentMonth, setCurrentMonth] = useState(now.getMonth() + 1);
@@ -33,7 +39,10 @@ const TransactionsPage = () => {
   useEffect(() => {
     transactionService.getAll()
       .then(data => {
-        const total = data.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
+        if (!data || !Array.isArray(data)) return;
+        const total = data
+          .filter(t => t.type === 'INCOME')
+          .reduce((sum, t) => sum + t.amount, 0);
         setAllTimeIncome(total);
       })
       .catch(() => {});
@@ -42,9 +51,30 @@ const TransactionsPage = () => {
   useEffect(() => {
     setLoading(true);
     transactionService.getByMonth(currentMonth, currentYear)
-      .then(data => { setTransactions(data.sort((a, b) => b.transactionId - a.transactionId)); setLoading(false); })
+      .then(data => {
+        if (!data || !Array.isArray(data)) {
+          setTransactions([]);
+          setLoading(false);
+          return;
+        }
+        const sorted = data.sort((a, b) => b.transactionId - a.transactionId);
+        setTransactions(sorted);
+        setLoading(false);
+        // ← No auto-open here — Dashboard.jsx handles it
+      })
       .catch(err => { setError(err.message); setLoading(false); });
   }, [currentMonth, currentYear]);
+
+  const handleOpenSavingsModal = (t) => {
+    setSavingsModal({
+      isOpen: true,
+      transactionData: {
+        transactionId: t.transactionId,
+        amount:        t.amount,
+        suggestedGoal: t.suggestedGoal || '',
+      },
+    });
+  };
 
   const toggleRow = (id) => setExpandedRow(expandedRow === id ? null : id);
 
@@ -85,7 +115,9 @@ const TransactionsPage = () => {
   }, {});
 
   const sortedDates = Object.keys(groupedTransactions).sort((a, b) => new Date(b) - new Date(a));
-  sortedDates.forEach(date => { groupedTransactions[date].sort((a, b) => b.transactionId - a.transactionId); });
+  sortedDates.forEach(date => {
+    groupedTransactions[date].sort((a, b) => b.transactionId - a.transactionId);
+  });
 
   const categoryEmoji = {
     FOOD:'🍔', TRANSPORT:'🚗', UTILITIES:'💡', ENTERTAINMENT:'🎬',
@@ -100,7 +132,9 @@ const TransactionsPage = () => {
       <div className="page-header">
         <div>
           <h1>Transactions</h1>
-          <p className="page-subtitle">{isCurrentMonth ? 'Your transaction history' : `Viewing history for ${selectedMonthLabel}`}</p>
+          <p className="page-subtitle">
+            {isCurrentMonth ? 'Your transaction history' : `Viewing history for ${selectedMonthLabel}`}
+          </p>
         </div>
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={handleExport}>
@@ -112,19 +146,56 @@ const TransactionsPage = () => {
 
       <div className="transactions-summary-wrapper">
         <div className="transactions-summary">
-          <div className="summary-card"><div className="summary-icon income">💰</div><div className="summary-details"><span className="summary-label">Total Income</span><span className="summary-value positive">+Ksh {summary.totalIncome.toLocaleString()}</span></div></div>
-          <div className="summary-card"><div className="summary-icon expenses">📉</div><div className="summary-details"><span className="summary-label">Total Expenses</span><span className="summary-value negative">-Ksh {summary.totalExpenses.toLocaleString()}</span></div></div>
-          <div className="summary-card"><div className="summary-icon pending">🔢</div><div className="summary-details"><span className="summary-label">Transactions</span><span className="summary-value">{summary.totalTransactions}</span></div></div>
-          <div className="summary-card"><div className="summary-icon daily">📅</div><div className="summary-details"><span className="summary-label">Net Balance</span><span className={`summary-value ${summary.totalIncome - summary.totalExpenses >= 0 ? 'positive' : 'negative'}`}>Ksh {(summary.totalIncome - summary.totalExpenses).toLocaleString()}</span></div></div>
-          <div className="summary-card"><div className="summary-icon income">📈</div><div className="summary-details"><span className="summary-label">All-Time Income</span><span className="summary-value positive">+Ksh {allTimeIncome.toLocaleString()}</span></div></div>
+          <div className="summary-card">
+            <div className="summary-icon income">💰</div>
+            <div className="summary-details">
+              <span className="summary-label">Total Income</span>
+              <span className="summary-value positive">+Ksh {summary.totalIncome.toLocaleString()}</span>
+            </div>
+          </div>
+          <div className="summary-card">
+            <div className="summary-icon expenses">📉</div>
+            <div className="summary-details">
+              <span className="summary-label">Total Expenses</span>
+              <span className="summary-value negative">-Ksh {summary.totalExpenses.toLocaleString()}</span>
+            </div>
+          </div>
+          <div className="summary-card">
+            <div className="summary-icon pending">🔢</div>
+            <div className="summary-details">
+              <span className="summary-label">Transactions</span>
+              <span className="summary-value">{summary.totalTransactions}</span>
+            </div>
+          </div>
+          <div className="summary-card">
+            <div className="summary-icon daily">📅</div>
+            <div className="summary-details">
+              <span className="summary-label">Net Balance</span>
+              <span className={`summary-value ${summary.totalIncome - summary.totalExpenses >= 0 ? 'positive' : 'negative'}`}>
+                Ksh {(summary.totalIncome - summary.totalExpenses).toLocaleString()}
+              </span>
+            </div>
+          </div>
+          <div className="summary-card">
+            <div className="summary-icon income">📈</div>
+            <div className="summary-details">
+              <span className="summary-label">All-Time Income</span>
+              <span className="summary-value positive">+Ksh {allTimeIncome.toLocaleString()}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="filters-section">
         <div className="search-box">
           <span className="search-icon">🔍</span>
-          <input type="text" placeholder="Search by category or message..." value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)} className="search-input" />
+          <input
+            type="text"
+            placeholder="Search by category or message..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
         </div>
         <div className="filter-controls">
           <div className="filter-tabs">
@@ -135,7 +206,12 @@ const TransactionsPage = () => {
           <div className="month-selector">
             <button className="month-nav" onClick={() => changeMonth(-1)}>←</button>
             <span className="current-month">{selectedMonthLabel}</span>
-            <button className="month-nav" onClick={() => changeMonth(1)} disabled={isCurrentMonth} style={{ opacity: isCurrentMonth ? 0.4 : 1 }}>→</button>
+            <button
+              className="month-nav"
+              onClick={() => changeMonth(1)}
+              disabled={isCurrentMonth}
+              style={{ opacity: isCurrentMonth ? 0.4 : 1 }}
+            >→</button>
           </div>
         </div>
       </div>
@@ -143,33 +219,79 @@ const TransactionsPage = () => {
       <div className="transactions-list-container">
         <div className="transactions-list-inner">
           <div className="transactions-header">
-            <span>Date</span><span>Category</span><span>Type</span><span>Amount</span><span></span>
+            <span>Date</span>
+            <span>Category</span>
+            <span>Type</span>
+            <span>Amount</span>
+            <span></span>
           </div>
+
           {sortedDates.length > 0 ? (
             sortedDates.map(date => (
               <div key={date} className="date-group">
                 <div className="date-header">
-                  {new Date(date).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
+                  {new Date(date).toLocaleDateString('en-US', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                  })}
                 </div>
+
                 {groupedTransactions[date].map(t => (
                   <div key={t.transactionId}>
-                    <div className={`transaction-row ${expandedRow === t.transactionId ? 'expanded' : ''}`}
-                      onClick={() => toggleRow(t.transactionId)}>
+                    <div
+                      className={`transaction-row ${expandedRow === t.transactionId ? 'expanded' : ''}`}
+                      onClick={() => toggleRow(t.transactionId)}
+                    >
+                      {/* ── Mobile layout ── */}
                       <div className="mobile-row">
-                        <span className="mobile-date">{new Date(t.creationDate).toLocaleDateString('en-US', { month:'short', day:'numeric' })}</span>
+                        <span className="mobile-date">
+                          {new Date(t.creationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
                         <div className="mobile-row-main">
-                          <span className={`category-badge category-${t.category?.toLowerCase()}`}>{categoryEmoji[t.category]} {t.category}</span>
+                          <span className={`category-badge category-${t.category?.toLowerCase()}`}>
+                            {categoryEmoji[t.category]} {t.category}
+                          </span>
                           <span className={`status-badge status-${t.type?.toLowerCase()}`}>{t.type}</span>
-                          <span className={`transaction-amount ${t.type === 'INCOME' ? 'positive' : 'negative'}`}>{t.type === 'INCOME' ? '+' : '-'}Ksh {t.amount?.toLocaleString()}</span>
+                          <span className={`transaction-amount ${t.type === 'INCOME' ? 'positive' : 'negative'}`}>
+                            {t.type === 'INCOME' ? '+' : '-'}Ksh {t.amount?.toLocaleString()}
+                          </span>
                         </div>
-                        <div className="mobile-row-arrow"><span className="expand-icon">{expandedRow === t.transactionId ? '▲' : '▼'}</span></div>
+                        <div className="mobile-row-arrow">
+                          <span className="expand-icon">{expandedRow === t.transactionId ? '▲' : '▼'}</span>
+                        </div>
                       </div>
-                      <span className="transaction-date desktop-only">{new Date(t.creationDate).toLocaleDateString('en-US', { month:'short', day:'numeric' })}</span>
-                      <span className="transaction-category desktop-only"><span className={`category-badge category-${t.category?.toLowerCase()}`}>{categoryEmoji[t.category]} {t.category}</span></span>
-                      <span className="transaction-status desktop-only"><span className={`status-badge status-${t.type?.toLowerCase()}`}>{t.type}</span></span>
-                      <span className={`transaction-amount desktop-only ${t.type === 'INCOME' ? 'positive' : 'negative'}`}>{t.type === 'INCOME' ? '+' : '-'}Ksh {t.amount?.toLocaleString()}</span>
-                      <span className="expand-icon desktop-only">{expandedRow === t.transactionId ? '▲' : '▼'}</span>
+
+                      {/* ── Desktop layout ── */}
+                      <span className="transaction-date desktop-only">
+                        {new Date(t.creationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                      <span className="transaction-category desktop-only">
+                        <span className={`category-badge category-${t.category?.toLowerCase()}`}>
+                          {categoryEmoji[t.category]} {t.category}
+                        </span>
+                      </span>
+                      <span className="transaction-status desktop-only">
+                        <span className={`status-badge status-${t.type?.toLowerCase()}`}>{t.type}</span>
+                      </span>
+                      <span className={`transaction-amount desktop-only ${t.type === 'INCOME' ? 'positive' : 'negative'}`}>
+                        {t.type === 'INCOME' ? '+' : '-'}Ksh {t.amount?.toLocaleString()}
+                      </span>
+
+                      {/* ── 🎯 Goal button for unassigned savings ── */}
+                      {t.isSaving && !t.goalId && (
+                        <button
+                          className="assign-goal-btn"
+                          title="Assign to a goal"
+                          onClick={(e) => { e.stopPropagation(); handleOpenSavingsModal(t); }}
+                        >
+                          🎯
+                        </button>
+                      )}
+
+                      <span className="expand-icon desktop-only">
+                        {expandedRow === t.transactionId ? '▲' : '▼'}
+                      </span>
                     </div>
+
                     {expandedRow === t.transactionId && (
                       <div className="transaction-detail">
                         <span className="detail-label">📩 M-Pesa Message:</span>
@@ -181,10 +303,29 @@ const TransactionsPage = () => {
               </div>
             ))
           ) : (
-            <div className="no-transactions"><p>No transactions found for {selectedMonthLabel}</p></div>
+            <div className="no-transactions">
+              <p>No transactions found for {selectedMonthLabel}</p>
+            </div>
           )}
         </div>
       </div>
+
+      {/* ── Savings Modal — manual 🎯 button only, no auto-trigger ── */}
+      <SavingsPromptModal
+        isOpen={savingsModal.isOpen}
+        transactionData={savingsModal.transactionData}
+        onClose={() => setSavingsModal({ isOpen: false, transactionData: null })}
+        onSave={(result) => {
+          setTransactions(prev =>
+            prev.map(t =>
+              t.transactionId === savingsModal.transactionData?.transactionId
+                ? { ...t, goalId: result.matchedGoalId }
+                : t
+            )
+          );
+          setSavingsModal({ isOpen: false, transactionData: null });
+        }}
+      />
     </div>
   );
 };

@@ -1,62 +1,74 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiTarget, FiX, FiSave, FiTrendingUp, FiHome, FiBriefcase, FiShoppingBag, FiHeart, FiBook, FiCheck } from 'react-icons/fi';
-import { transactionService } from '../service/api';
+import { FiTarget, FiX, FiSave, FiCheck, FiPlus } from 'react-icons/fi';
+import { transactionService, goalsService } from '../service/api';
 import './SavingsPromptModal.css';
 
 const SavingsPromptModal = ({ isOpen, onClose, transactionData, onSave }) => {
-  const [selectedGoal, setSelectedGoal] = useState('');
-  const [customGoal, setCustomGoal]     = useState('');
-  const [isLoading, setIsLoading]       = useState(false);
+  const [selectedGoalId, setSelectedGoalId] = useState(null);
+  const [customGoal,     setCustomGoal]     = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
-  const [error, setError]               = useState('');
-  const [success, setSuccess]           = useState(false);
+  const [isLoading,      setIsLoading]      = useState(false);
+  const [isFetching,     setIsFetching]     = useState(false);
+  const [goals,          setGoals]          = useState([]);
+  const [error,          setError]          = useState('');
+  const [success,        setSuccess]        = useState(false);
 
-  // Reset state when modal opens with new transaction
+  // ── Reset + fetch real goals when modal opens ──────────────────
   useEffect(() => {
-    if (isOpen) {
-      setSelectedGoal('');
-      setCustomGoal('');
-      setShowCustomInput(false);
-      setError('');
-      setSuccess(false);
-    }
+    if (!isOpen) return;
+
+    setSelectedGoalId(null);
+    setCustomGoal('');
+    setShowCustomInput(false);
+    setError('');
+    setSuccess(false);
+
+    setIsFetching(true);
+    goalsService.getAll()
+      .then(data => {
+        // Only show active/in-progress goals
+        const active = (data || []).filter(g =>
+          g.status === 'ACTIVE' ||
+          g.status === 'IN_PROGRESS' ||
+          g.status === 'in_progress' ||
+          !g.status
+        );
+        setGoals(active);
+      })
+      .catch(() => setGoals([]))
+      .finally(() => setIsFetching(false));
   }, [isOpen, transactionData]);
 
-  // Close on ESC
+  // ── Close on ESC ───────────────────────────────────────────────
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
-  const predefinedGoals = [
-    { id: 'emergency',  label: 'Emergency Fund',       icon: <FiSave />,      color: '#2DD4BF' },
-    { id: 'vacation',   label: 'Vacation',              icon: <FiTrendingUp />, color: '#F59E0B' },
-    { id: 'housing',    label: 'Housing / Rent',        icon: <FiHome />,      color: '#3B82F6' },
-    { id: 'business',   label: 'Business Investment',   icon: <FiBriefcase />, color: '#8B5CF6' },
-    { id: 'shopping',   label: 'Shopping',              icon: <FiShoppingBag />, color: '#EC4899' },
-    { id: 'education',  label: 'Education Fund',        icon: <FiBook />,      color: '#10B981' },
-    { id: 'charity',    label: 'Charity / Giving',      icon: <FiHeart />,     color: '#EF4444' },
-  ];
-
   const handleGoalSelect = (goalId) => {
-    setSelectedGoal(goalId);
+    setSelectedGoalId(goalId);
     setShowCustomInput(false);
     setCustomGoal('');
     setError('');
   };
 
   const handleCustomSelect = () => {
+    setSelectedGoalId('custom');
     setShowCustomInput(true);
-    setSelectedGoal('custom');
     setError('');
   };
 
   const handleSubmit = async () => {
-    const goalHint = selectedGoal === 'custom'
-      ? customGoal.trim()
-      : predefinedGoals.find(g => g.id === selectedGoal)?.label;
+    // Determine the hint to send — either the goal's name or custom text
+    let goalHint = '';
+    if (selectedGoalId === 'custom') {
+      goalHint = customGoal.trim();
+    } else {
+      const found = goals.find(g => g.goalId === selectedGoalId || g.id === selectedGoalId);
+      goalHint = found?.goalName || found?.name || '';
+    }
 
     if (!goalHint) {
       setError('Please select or enter a goal.');
@@ -79,14 +91,10 @@ const SavingsPromptModal = ({ isOpen, onClose, transactionData, onSave }) => {
 
       if (result?.matched) {
         setSuccess(true);
-        // Notify parent if provided
         if (onSave) onSave(result);
-        setTimeout(() => {
-          onClose();
-        }, 1500);
+        setTimeout(() => onClose(), 1500);
       } else {
-        // No existing goal matched — offer to create one
-        setError(result?.message || `No goal matched "${goalHint}". Create a goal with this name first.`);
+        setError(result?.message || `No goal matched "${goalHint}". Make sure the goal is active.`);
       }
     } catch (err) {
       setError('Something went wrong. Please try again.');
@@ -96,12 +104,20 @@ const SavingsPromptModal = ({ isOpen, onClose, transactionData, onSave }) => {
     }
   };
 
-  const formatAmount = (amount) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-    }).format(amount);
+  const formatAmount = (amount) =>
+    new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount);
+
+  const formatProgress = (goal) => {
+    const current = parseFloat(goal.currentAmount || goal.savedAmount || 0);
+    const target  = parseFloat(goal.targetAmount || goal.target || 1);
+    const pct     = Math.min(100, Math.round((current / target) * 100));
+    return { current, target, pct };
   };
+
+  const isSubmitDisabled =
+    !selectedGoalId ||
+    (selectedGoalId === 'custom' && !customGoal.trim()) ||
+    isLoading;
 
   return (
     <AnimatePresence>
@@ -110,8 +126,8 @@ const SavingsPromptModal = ({ isOpen, onClose, transactionData, onSave }) => {
           <motion.div
             className="savings-modal-content"
             initial={{ opacity: 0, scale: 0.9, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+            animate={{ opacity: 1, scale: 1,   y: 0  }}
+            exit={{    opacity: 0, scale: 0.9, y: 30 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -119,16 +135,15 @@ const SavingsPromptModal = ({ isOpen, onClose, transactionData, onSave }) => {
               <FiX />
             </button>
 
-            {/* Icon */}
             <div className="savings-modal-icon">
               <FiSave />
             </div>
 
             {success ? (
-              // ── Success state ──────────────────────────────────
+              // ── Success state ────────────────────────────────────
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
+                animate={{ opacity: 1, scale: 1  }}
                 className="savings-success-state"
               >
                 <div className="savings-success-icon">🎯</div>
@@ -138,10 +153,9 @@ const SavingsPromptModal = ({ isOpen, onClose, transactionData, onSave }) => {
                 </p>
               </motion.div>
             ) : (
-              // ── Selection state ────────────────────────────────
+              // ── Selection state ──────────────────────────────────
               <>
                 <h2 className="savings-modal-title">Savings Detected! 🎯</h2>
-
                 <p className="savings-modal-subtitle">
                   We noticed a savings transaction of{' '}
                   <strong>{formatAmount(transactionData?.amount || 0)}</strong>.
@@ -150,9 +164,8 @@ const SavingsPromptModal = ({ isOpen, onClose, transactionData, onSave }) => {
                   )}
                 </p>
 
-                <p className="savings-modal-question">What are you saving toward?</p>
+                <p className="savings-modal-question">Which goal is this for?</p>
 
-                {/* Error message */}
                 {error && (
                   <motion.p
                     className="savings-modal-error"
@@ -163,39 +176,69 @@ const SavingsPromptModal = ({ isOpen, onClose, transactionData, onSave }) => {
                   </motion.p>
                 )}
 
-                {/* Goal Selection Grid */}
-                <div className="savings-goals-grid">
-                  {predefinedGoals.map((goal) => (
-                    <button
-                      key={goal.id}
-                      className={`savings-goal-card ${selectedGoal === goal.id ? 'selected' : ''}`}
-                      onClick={() => handleGoalSelect(goal.id)}
-                      style={{ '--goal-color': goal.color }}
-                    >
-                      <span className="goal-icon" style={{ color: goal.color }}>{goal.icon}</span>
-                      <span className="goal-label">{goal.label}</span>
-                      {selectedGoal === goal.id && <FiCheck className="goal-check" />}
-                    </button>
-                  ))}
+                {/* ── Goals list ── */}
+                <div className="savings-goals-list">
+                  {isFetching ? (
+                    <div className="savings-fetching">
+                      <span className="savings-spinner"></span>
+                      <span>Loading your goals...</span>
+                    </div>
+                  ) : goals.length === 0 ? (
+                    <p className="savings-no-goals">
+                      No active goals found. Create a goal first in the Goals page, or use a custom name below.
+                    </p>
+                  ) : (
+                    goals.map(goal => {
+                      const id  = goal.goalId || goal.id;
+                      const { current, target, pct } = formatProgress(goal);
+                      const isSelected = selectedGoalId === id;
 
-                  {/* Custom Goal */}
+                      return (
+                        <button
+                          key={id}
+                          className={`savings-goal-row ${isSelected ? 'selected' : ''}`}
+                          onClick={() => handleGoalSelect(id)}
+                        >
+                          <div className="goal-row-left">
+                            <span className="goal-row-name">{goal.goalName || goal.name}</span>
+                            <div className="goal-row-progress-bar">
+                              <div
+                                className="goal-row-progress-fill"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="goal-row-amounts">
+                              KES {current.toLocaleString()} / KES {target.toLocaleString()} ({pct}%)
+                            </span>
+                          </div>
+                          {isSelected && <FiCheck className="goal-row-check" />}
+                        </button>
+                      );
+                    })
+                  )}
+
+                  {/* Custom goal option */}
                   <button
-                    className={`savings-goal-card custom ${selectedGoal === 'custom' ? 'selected' : ''}`}
+                    className={`savings-goal-row custom-row ${selectedGoalId === 'custom' ? 'selected' : ''}`}
                     onClick={handleCustomSelect}
                   >
-                    <span className="goal-icon">✏️</span>
-                    <span className="goal-label">Custom Goal</span>
-                    {selectedGoal === 'custom' && <FiCheck className="goal-check" />}
+                    <div className="goal-row-left">
+                      <span className="goal-row-name">
+                        <FiPlus style={{ marginRight: 6 }} />
+                        Use a different goal name
+                      </span>
+                    </div>
+                    {selectedGoalId === 'custom' && <FiCheck className="goal-row-check" />}
                   </button>
                 </div>
 
-                {/* Custom Goal Input */}
+                {/* Custom input */}
                 {showCustomInput && (
                   <motion.div
                     className="savings-custom-input"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
+                    exit={{    opacity: 0, height: 0    }}
                   >
                     <input
                       type="text"
@@ -208,15 +251,15 @@ const SavingsPromptModal = ({ isOpen, onClose, transactionData, onSave }) => {
                   </motion.div>
                 )}
 
-                {/* Action Buttons */}
+                {/* Action buttons */}
                 <div className="savings-modal-actions">
                   <button className="savings-skip-btn" onClick={onClose}>
                     Skip for now
                   </button>
                   <button
-                    className={`savings-save-btn ${(!selectedGoal || (selectedGoal === 'custom' && !customGoal)) ? 'disabled' : ''}`}
+                    className={`savings-save-btn ${isSubmitDisabled ? 'disabled' : ''}`}
                     onClick={handleSubmit}
-                    disabled={!selectedGoal || (selectedGoal === 'custom' && !customGoal) || isLoading}
+                    disabled={isSubmitDisabled}
                   >
                     {isLoading ? (
                       <>
@@ -233,7 +276,7 @@ const SavingsPromptModal = ({ isOpen, onClose, transactionData, onSave }) => {
                 </div>
 
                 <p className="savings-modal-note">
-                  This will help us track your progress in Goals & Budgets.
+                  This will help us track your progress in Goals &amp; Budgets.
                 </p>
               </>
             )}
