@@ -24,9 +24,10 @@ const Dashboard = () => {
   const [showAPKModal, setShowAPKModal] = useState(false);
 
   // Savings prompt states
-  const [showSavingsModal, setShowSavingsModal]               = useState(false);
+  const [showSavingsModal, setShowSavingsModal]                   = useState(false);
   const [pendingSavingsTransaction, setPendingSavingsTransaction] = useState(null);
 
+  // ── Fetch dashboard summary ──────────────────────────────────────────────
   const fetchSummary = () => {
     transactionService.getSummary()
       .then(data => { setSummary(data); setLoading(false); })
@@ -39,7 +40,7 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Show APK modal once after login
+  // ── Show APK modal once after login ─────────────────────────────────────
   useEffect(() => {
     const hasShownModal = localStorage.getItem('apk_modal_shown');
     if (user && !hasShownModal && !loading) {
@@ -48,52 +49,60 @@ const Dashboard = () => {
     }
   }, [user, loading]);
 
-  // Check for unassigned savings transactions — uses getAll, not getRecent
+  // ── Check for unassigned savings + poll every 30s for new ones ──────────
   useEffect(() => {
     if (!user || loading) return;
 
-    const alreadyChecked = sessionStorage.getItem('savings_prompt_shown');
-    if (alreadyChecked) return;
-
-    const checkForSavings = async () => {
+    const findUnassignedSaving = async () => {
       try {
         const transactions = await transactionService.getAll();
-
         if (!transactions || transactions.length === 0) return;
 
-        // Match what your backend actually returns:
-        // intent === 'SAVING' and goalId is null = needs goal assignment
-        const unassigned = transactions.find(tx =>
-          tx.intent === 'SAVING' && !tx.goalId
-        );
+        // Sort newest first, find first unassigned saving
+        const unassigned = transactions
+          .filter(tx => tx.intent === 'SAVING' && !tx.goalId)
+          .sort((a, b) => new Date(b.creationDate) - new Date(a.creationDate))[0];
 
-        if (unassigned) {
-          setPendingSavingsTransaction({
-            transactionId: unassigned.transactionId,
-            amount:        unassigned.amount,
-            suggestedGoal: null,
-          });
-          setShowSavingsModal(true);
-          sessionStorage.setItem('savings_prompt_shown', 'true');
-        }
+        if (!unassigned) return;
+
+        // Don't show the same transaction twice
+        const lastShownId = sessionStorage.getItem('last_savings_prompt_id');
+        if (lastShownId === String(unassigned.transactionId)) return;
+
+        setPendingSavingsTransaction({
+          transactionId: unassigned.transactionId,
+          amount:        unassigned.amount,
+          suggestedGoal: unassigned.description || null,
+        });
+        setShowSavingsModal(true);
+        sessionStorage.setItem('last_savings_prompt_id', String(unassigned.transactionId));
+
       } catch (err) {
-        // Silently fail — don't log out the user
-        console.error('Savings check failed:', err.message);
+        // Silently fail — never log out the user
+        console.error('Savings check failed silently:', err.message);
       }
     };
 
-    checkForSavings();
+    // Check immediately on load
+    findUnassignedSaving();
+
+    // Poll every 30s — catches new M-Shwari SMS sent from Android APK
+    const poll = setInterval(() => {
+      if (!showSavingsModal) findUnassignedSaving();
+    }, 30000);
+
+    return () => clearInterval(poll);
   }, [user, loading]);
 
-  const handleCloseAPKModal    = () => setShowAPKModal(false);
+  // ── Handlers ─────────────────────────────────────────────────────────────
+  const handleCloseAPKModal     = () => setShowAPKModal(false);
   const handleCloseSavingsModal = () => setShowSavingsModal(false);
 
   const handleSaveSavingsGoal = async (result) => {
-    if (result?.matched) {
-      fetchSummary();
-    }
+    if (result?.matched) fetchSummary();
   };
 
+  // ── Helpers ──────────────────────────────────────────────────────────────
   const firstName = user?.name?.split(' ')[0] || 'there';
 
   const currentMonthYear = new Date().toLocaleString('default', {
@@ -102,9 +111,16 @@ const Dashboard = () => {
 
   const formatTrend = (value) => {
     if (value === null || value === undefined) return { label: '—', positive: true };
-    const num = parseFloat(value);
+    const num      = parseFloat(value);
     const positive = num >= 0;
     return { label: `${positive ? '+' : ''}${num.toFixed(1)}%`, positive };
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'morning';
+    if (hour < 17) return 'afternoon';
+    return 'evening';
   };
 
   if (loading) return <Loader fullPage={false} message="Loading dashboard..." />;
@@ -117,13 +133,6 @@ const Dashboard = () => {
   const totalBalance    = parseFloat(summary?.totalBalance    || 0);
   const monthlyIncome   = parseFloat(summary?.monthlyIncome   || 0);
   const monthlyExpenses = parseFloat(summary?.monthlyExpenses || 0);
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'morning';
-    if (hour < 17) return 'afternoon';
-    return 'evening';
-  };
 
   return (
     <div className="dashboard-container">
