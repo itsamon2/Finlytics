@@ -14,8 +14,8 @@ public class ContributionCheckService {
     @Autowired
     private GoalsService goalsService;
 
-    public List<GoalCheckInDTO> getDueCheckIns(Long userId) {  // ✅
-        List<Goals> dueGoals = goalsService.getDueGoals(userId);  // ✅
+    public List<GoalCheckInDTO> getDueCheckIns(Long userId) {
+        List<Goals> dueGoals = goalsService.getDueGoals(userId);
 
         return dueGoals.stream()
                 .map(goal -> new GoalCheckInDTO(
@@ -31,21 +31,21 @@ public class ContributionCheckService {
                 .toList();
     }
 
-    public Goals confirmContribution(Long goalId, BigDecimal actualAmount, Long userId) {  // ✅
-        return goalsService.recordContribution(goalId, actualAmount, userId);  // ✅
+    public Goals confirmContribution(Long goalId, BigDecimal actualAmount, Long userId) {
+        return goalsService.recordContribution(goalId, actualAmount, userId);
     }
 
-    public Goals rescheduleContribution(Long goalId, LocalDate newDate, Long userId) {  // ✅
-        return goalsService.rescheduleContribution(goalId, newDate, userId);  // ✅
+    public Goals rescheduleContribution(Long goalId, LocalDate newDate, Long userId) {
+        return goalsService.rescheduleContribution(goalId, newDate, userId);
     }
 
     public Goals updateFrequencyAfterMiss(Long goalId, Integer newValue,
-                                          ContributionFrequencyUnit newUnit, Long userId) {  // ✅
-        Goals goal = goalsService.getGoalsByIdAndUserId(goalId, userId);  // ✅
+                                          ContributionFrequencyUnit newUnit, Long userId) {
+        Goals goal = goalsService.getGoalsByIdAndUserId(goalId, userId);
         goal.setLastContributionDate(LocalDate.now());
         goal.setMissedContributionDate(null);
         goalsService.updateGoals(goal);
-        return goalsService.updateFrequency(goalId, newValue, newUnit, userId);  // ✅
+        return goalsService.updateFrequency(goalId, newValue, newUnit, userId);
     }
 
     public static class GoalCheckInDTO {

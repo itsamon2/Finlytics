@@ -18,13 +18,12 @@ const Dashboard = () => {
   const navigate    = useNavigate();
   const [timeRange, setTimeRange] = useState('7months');
 
-  const [summary, setSummary]   = useState(null);
-  const [loading, setLoading]   = useState(true);
-  const [error,   setError]     = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
   const [showAPKModal, setShowAPKModal] = useState(false);
 
-  // Savings prompt states
-  const [showSavingsModal, setShowSavingsModal]                   = useState(false);
+  const [showSavingsModal,          setShowSavingsModal]          = useState(false);
   const [pendingSavingsTransaction, setPendingSavingsTransaction] = useState(null);
 
   // ── Fetch dashboard summary ──────────────────────────────────────────────
@@ -49,56 +48,62 @@ const Dashboard = () => {
     }
   }, [user, loading]);
 
-  // ── Check for unassigned savings + poll every 30s for new ones ──────────
+  // ── Check for unassigned savings + poll every 30s ────────────────────────
   useEffect(() => {
     if (!user || loading) return;
 
     const findUnassignedSaving = async () => {
       try {
-        const transactions = await transactionService.getAll();
-        if (!transactions || transactions.length === 0) return;
+        // getAllSafe never throws or redirects — returns null on any failure
+        const transactions = await transactionService.getAllSafe();
 
-        // Sort newest first, find first unassigned saving
+        // Null guard — if request failed or returned null, bail silently
+        if (!transactions || !Array.isArray(transactions)) return;
+        if (transactions.length === 0) return;
+
+        // Find newest unassigned saving
         const unassigned = transactions
-          .filter(tx => tx.intent === 'SAVING' && !tx.goalId)
+          .filter(tx => tx.isSaving && !tx.goalId)
           .sort((a, b) => new Date(b.creationDate) - new Date(a.creationDate))[0];
 
         if (!unassigned) return;
 
-        // Don't show the same transaction twice
+        // Don't show the same transaction twice in the same session
         const lastShownId = sessionStorage.getItem('last_savings_prompt_id');
         if (lastShownId === String(unassigned.transactionId)) return;
 
         setPendingSavingsTransaction({
           transactionId: unassigned.transactionId,
           amount:        unassigned.amount,
-          suggestedGoal: unassigned.description || null,
+          suggestedGoal: unassigned.suggestedGoal || null,
         });
         setShowSavingsModal(true);
         sessionStorage.setItem('last_savings_prompt_id', String(unassigned.transactionId));
 
       } catch (err) {
-        // Silently fail — never log out the user
+        // Silently fail — never log out the user over a savings check
         console.error('Savings check failed silently:', err.message);
       }
     };
 
-    // Check immediately on load
-    findUnassignedSaving();
+    // Delay 5s so login token is fully settled before firing
+    const initialDelay = setTimeout(findUnassignedSaving, 5000);
 
-    // Poll every 30s — catches new M-Shwari SMS sent from Android APK
+    // Poll every 30s for new M-Shwari/savings SMS
     const poll = setInterval(() => {
       if (!showSavingsModal) findUnassignedSaving();
     }, 30000);
 
-    return () => clearInterval(poll);
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(poll);
+    };
   }, [user, loading]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleCloseAPKModal     = () => setShowAPKModal(false);
   const handleCloseSavingsModal = () => setShowSavingsModal(false);
-
-  const handleSaveSavingsGoal = async (result) => {
+  const handleSaveSavingsGoal   = (result) => {
     if (result?.matched) fetchSummary();
   };
 

@@ -2,16 +2,6 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const TOKEN_KEY = 'auth_token';
 
-// ADD THIS AT THE TOP TEMPORARILY
-const originalFetch = window.fetch;
-window.fetch = async (...args) => {
-  const response = await originalFetch(...args);
-  if (response.status === 401) {
-    console.error('🔴 401 on:', args[0]);
-  }
-  return response;
-};
-
 // ── Base request helper ──────────────────────────────────────────────────────
 const request = async (endpoint, options = {}) => {
   const token = localStorage.getItem(TOKEN_KEY);
@@ -29,12 +19,13 @@ const request = async (endpoint, options = {}) => {
   });
 
   if (response.status === 401) {
-    if (token) {
+    console.error('🔴 401 LOGOUT TRIGGER - endpoint:', endpoint, '| token exists:', !!token, '| pathname:', window.location.pathname);
+    if (token && window.location.pathname !== '/login') {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem('auth_user');
       window.location.href = '/login';
     }
-    return;
+    return null;
   }
 
   if (!response.ok) {
@@ -44,6 +35,33 @@ const request = async (endpoint, options = {}) => {
 
   if (response.status === 204) return null;
   return response.json();
+};
+
+// ── Safe request — never redirects on 401 (used for background polling) ──────
+const requestSafe = async (endpoint, options = {}) => {
+  const token = localStorage.getItem(TOKEN_KEY);
+
+  if (!token) return null;
+
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+    ...options.headers,
+  };
+
+  try {
+    const response = await fetch(`${BASE_URL}/api${endpoint}`, {
+      ...options,
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    if (!response.ok) return null;
+    if (response.status === 204) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
 };
 
 // ── Text response helper ─────────────────────────────────────────────────────
@@ -58,12 +76,13 @@ const requestText = async (endpoint) => {
   });
 
   if (response.status === 401) {
-    if (token) {
+    console.error('🔴 401 LOGOUT TRIGGER (text) - endpoint:', endpoint, '| token exists:', !!token);
+    if (token && window.location.pathname !== '/login') {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem('auth_user');
       window.location.href = '/login';
     }
-    return;
+    return null;
   }
 
   if (!response.ok) {
@@ -77,6 +96,7 @@ const requestText = async (endpoint) => {
 // ── Services ─────────────────────────────────────────────────────────────────
 export const transactionService = {
   getAll:                () => request('/transactions'),
+  getAllSafe:             () => requestSafe('/transactions'),
   getById:               (id) => request(`/transactions/${id}`),
   getByCategory:         (category) => request(`/transactions/category/${category}`),
   delete:                (id) => request(`/transactions/${id}`, { method: 'DELETE' }),
