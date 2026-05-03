@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register",
-                                "/api/auth/forgot-password",   // FIX 2: removed duplicate entry
+                                "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
                                 "/api/auth/verify-otp",
                                 "/api/auth/resend-otp",
