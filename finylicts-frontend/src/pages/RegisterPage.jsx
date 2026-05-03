@@ -35,7 +35,6 @@ const RegisterPage = () => {
   const [focusedField,        setFocusedField]        = useState(null);
   const [passwordStrength,    setPasswordStrength]    = useState(0);
 
-  // ── Animation variants ──────────────────────────────────────────────────────
   const cardVariants = {
     hidden:  { opacity: 0, y: 30, scale: 0.95 },
     visible: {
@@ -49,7 +48,6 @@ const RegisterPage = () => {
     visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
   };
 
-  // ── Validators ──────────────────────────────────────────────────────────────
   const validateName = (v) => {
     if (!v)                           return 'Name is required';
     if (!/^[A-Za-z\s]*$/.test(v))    return 'Name can only contain letters and spaces';
@@ -63,11 +61,8 @@ const RegisterPage = () => {
     return '';
   };
 
-  // Phone validation - checks if number is valid for the selected country
   const validatePhone = (v) => {
     if (!v) return 'Phone number is required';
-    // react-phone-number-input provides isPossiblePhoneNumber and isValidPhoneNumber
-    // For now, we'll check if it has at least 10 digits
     const digitsOnly = v.replace(/\D/g, '');
     if (digitsOnly.length < 9) return 'Please enter a complete phone number';
     return '';
@@ -85,7 +80,6 @@ const RegisterPage = () => {
     return '';
   };
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -136,7 +130,6 @@ const RegisterPage = () => {
     return '#10B981';
   };
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -168,10 +161,18 @@ const RegisterPage = () => {
         ''
       );
 
-     if (result.success) {
-         navigate('/verify-otp', { state: { email: formData.email } });
+      if (result.success) {
+        navigate('/verify-otp', { state: { email: formData.email } });
       } else {
-        setError(result.error || 'Registration failed. Please try again.');
+        // Highlight phone field if it's a duplicate phone error
+        const msg = result.error || 'Registration failed. Please try again.';
+        if (msg.toLowerCase().includes('phone') || msg.toLowerCase().includes('number')) {
+          setErrors(prev => ({ ...prev, phoneNumber: msg }));
+        } else if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('already')) {
+          setErrors(prev => ({ ...prev, email: msg }));
+        } else {
+          setError(msg);
+        }
       }
     } catch (err) {
       setError('Registration failed. Please try again.');
@@ -271,7 +272,7 @@ const RegisterPage = () => {
               )}
             </motion.div>
 
-            {/* Phone Number - Fixed */}
+            {/* Phone Number */}
             <motion.div variants={itemVariants} className="form-group">
               <label className={focusedField === 'phone' ? 'focused' : ''}>
                 <FiPhone className="field-icon" />
@@ -423,7 +424,6 @@ const RegisterPage = () => {
               <span>Already have an account?</span>
               <Link to="/login">Sign in</Link>
             </motion.div>
-
           </form>
         </motion.div>
       </div>

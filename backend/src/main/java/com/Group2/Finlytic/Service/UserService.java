@@ -50,6 +50,16 @@ public class UserService {
     public User updateProfile(Long userId, String firstName, String lastName,
                               String phoneNumber, String profilePhoto) {
         User user = getUserById(userId);
+
+        // Check if phone number is already taken by another user
+        if (phoneNumber != null) {
+            userRepo.findByPhoneNumber(phoneNumber).ifPresent(existing -> {
+                if (!existing.getUserId().equals(userId)) {
+                    throw new RuntimeException("Phone number already registered to another account");
+                }
+            });
+        }
+
         if (firstName    != null) user.setFirstName(firstName);
         if (lastName     != null) user.setLastName(lastName);
         if (phoneNumber  != null) user.setPhoneNumber(phoneNumber);

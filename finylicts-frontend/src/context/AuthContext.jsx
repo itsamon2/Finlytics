@@ -49,13 +49,12 @@ export const AuthProvider = ({ children }) => {
 
       const data = await res.json().catch(() => ({}));
 
-      // ✅ Handle unverified email — return special flag so LoginPage can redirect
       if (res.status === 403) {
         return {
-          success:     false,
-          unverified:  true,
-          email:       data.email || email,
-          error:       data.message || 'Email not verified',
+          success:    false,
+          unverified: true,
+          email:      data.email || email,
+          error:      data.message || 'Email not verified',
         };
       }
 
@@ -63,7 +62,6 @@ export const AuthProvider = ({ children }) => {
         throw new Error(data.message || 'Invalid email or password');
       }
 
-      // Backend returns: { token, email, name, role, photo }
       const userData = {
         name:  data.name,
         email: data.email,
@@ -90,8 +88,7 @@ export const AuthProvider = ({ children }) => {
     persist(token, userData);
   }, [persist]);
 
-  // ── ✅ Called by VerifyOtpPage after successful OTP verification ─────────────
-  // Backend returns: { token, email, name, role, photo }
+  // ── Called by VerifyOtpPage after successful OTP verification ───────────────
   const loginAfterOtp = useCallback((data) => {
     const userData = {
       name:  data.name,
@@ -104,27 +101,26 @@ export const AuthProvider = ({ children }) => {
 
   // ── Register ────────────────────────────────────────────────────────────────
   const register = async (name, email, password, phone, location) => {
-  setError('');
-  try {
-    const res = await fetch(`${BASE_URL}/api/auth/register`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ name, email, password, phone, location }),
-    });
+    setError('');
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/register`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name, email, password, phone, location }),
+      });
 
-    const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      throw new Error(data.message || 'Registration failed');
+      if (!res.ok) {
+        throw new Error(data.message || 'Registration failed');
+      }
+
+      return { success: true, email };
+    } catch (err) {
+      setError(err.message);
+      return { success: false, error: err.message };
     }
-
-    // ✅ Just return success — NO login() call here
-    return { success: true, email };
-  } catch (err) {
-    setError(err.message);
-    return { success: false, error: err.message };
-  }
-};
+  };
 
   // ── Update profile ──────────────────────────────────────────────────────────
   const updateProfile = async (profileData) => {
@@ -140,21 +136,32 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify(profileData),
       });
 
-      if (!res.ok) throw new Error('Failed to update profile');
+      const data = await res.json().catch(() => ({}));
 
-      const updated     = await res.json();
-      const updatedUser = { ...user, ...updated };
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to update profile');
+      }
+
+      // Normalize backend field names (firstName, lastName, phoneNumber, profilePhoto)
+      // to frontend field names (name, phone, photo)
+      const updatedUser = {
+        ...user,
+        name:   data.firstName && data.lastName
+                  ? `${data.firstName} ${data.lastName}`.trim()
+                  : data.name || user.name,
+        email:  data.email        || user.email,
+        phone:  data.phoneNumber  || user.phone,
+        photo:  data.profilePhoto || profileData.avatar || user.photo,
+        userId: data.userId       || user.userId,
+      };
+
       localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
       setUser(updatedUser);
       localStorage.setItem('profileSettings', JSON.stringify(profileData));
       return { success: true };
     } catch (err) {
-      // Fallback: update locally only
-      const updatedUser = { ...user, ...profileData };
-      localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      localStorage.setItem('profileSettings', JSON.stringify(profileData));
-      return { success: true };
+      setError(err.message);
+      return { success: false, error: err.message };
     }
   };
 
@@ -197,8 +204,8 @@ export const AuthProvider = ({ children }) => {
     error,
     isAuthenticated,
     login,
-    loginWithToken,   // used by OAuthCallback
-    loginAfterOtp,    // ✅ used by VerifyOtpPage
+    loginWithToken,
+    loginAfterOtp,
     register,
     logout,
     forgotPassword,

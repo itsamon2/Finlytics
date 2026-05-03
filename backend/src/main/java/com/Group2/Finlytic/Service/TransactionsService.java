@@ -47,45 +47,43 @@ public class TransactionsService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    // ── Save transaction (manual entry, no AI needed) ────────────
-    public Transactions saveTransaction(Transactions transaction) {
-        if (transaction.getRawMessage() != null &&
-                !transaction.getRawMessage().isEmpty()) {
+   public Transactions saveTransaction(Transactions transaction) {
+    if (transaction.getRawMessage() != null &&
+            !transaction.getRawMessage().isEmpty()) {
 
-            TransactionAnalysis analysis =
-                    categorizationService.analyze(transaction.getRawMessage());
+        TransactionAnalysis analysis =
+                categorizationService.analyze(transaction.getRawMessage());
 
-            transaction.setCategory(analysis.category());
-            transaction.setAmount(analysis.amount());
+        transaction.setCategory(analysis.category());
+        transaction.setAmount(analysis.amount());
 
-            // FIX 1: Added .toUpperCase() and try/catch fallback — AI may return
-            //         lowercase type strings which cause IllegalArgumentException.
-            try {
-                transaction.setType(Transactions.TransactionType.valueOf(
-                        analysis.transactionType().toUpperCase()));
-            } catch (IllegalArgumentException e) {
-                String raw = transaction.getRawMessage().toLowerCase();
-                transaction.setType(raw.contains("received")
-                        ? Transactions.TransactionType.INCOME
-                        : Transactions.TransactionType.EXPENSE);
-            }
-
-            // Encrypt raw message before saving
-            String encryptionKey = getUserEncryptionKey(transaction.getUserId());
-            transaction.setRawMessage(
-                    encryptionService.encryptMessage(
-                            transaction.getRawMessage(), encryptionKey));
+        // Safe enum parsing with fallback
+        try {
+            transaction.setType(Transactions.TransactionType.valueOf(
+                    analysis.transactionType().toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            String raw = transaction.getRawMessage().toLowerCase();
+            transaction.setType(raw.contains("received")
+                    ? Transactions.TransactionType.INCOME
+                    : Transactions.TransactionType.EXPENSE);
         }
 
-        // Ensure creationDate is always set for date-range queries
-        if (transaction.getCreationDate() == null) {
-            transaction.setCreationDate(LocalDate.now());
-        }
-
-        Transactions saved = transactionsRepo.save(transaction);
-        budgetManagerService.updateBudgetFromTransaction(saved);
-        return saved;
+        // Encrypt raw message before saving
+        String encryptionKey = getUserEncryptionKey(transaction.getUserId());
+        transaction.setRawMessage(
+                encryptionService.encryptMessage(
+                        transaction.getRawMessage(), encryptionKey));
     }
+
+    // Ensure creationDate is always set for date-range queries
+    if (transaction.getCreationDate() == null) {
+        transaction.setCreationDate(LocalDate.now());
+    }
+
+    Transactions saved = transactionsRepo.save(transaction);
+    budgetManagerService.updateBudgetFromTransaction(saved);
+    return saved;
+}
 
     // ── Analyze SMS + save + attempt goal match ───────────────────
     public Map<String, Object> analyzeAndSave(String rawMessage, Long userId) {

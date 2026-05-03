@@ -33,11 +33,17 @@ public class ExternalTransactionController {
             @RequestBody MpesaTransactionRequest request,
             @RequestHeader("X-Api-Key") String apiKey) {
 
+        System.out.println("=== CONTROLLER REACHED ===");
+        System.out.println("ENV=[" + System.getenv("INTERNAL_API_KEY") + "]");
+        System.out.println("HDR=[" + apiKey + "]");
+
         // Validate API key
         String expectedKey = System.getenv("INTERNAL_API_KEY");
         if (expectedKey == null || !expectedKey.equals(apiKey)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Invalid API key"));
+
+
         }
 
         // Reject blank phone numbers before querying
