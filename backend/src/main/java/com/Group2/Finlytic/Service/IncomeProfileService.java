@@ -22,13 +22,17 @@ public class IncomeProfileService {
     }
 
     public IncomeProfile updateIncome(IncomeProfile incomeProfile, Long userId) {
-        incomeProfile.setUserId(userId);
-        incomeProfile.setUpdatedDate(LocalDate.now());
-        return incomeProfileRepo.save(incomeProfile);
+        return incomeProfileRepo
+                .findFirstByUserIdOrderByIncomeProfileIdDesc(userId)
+                .map(existing -> {
+                    existing.setDeclaredMonthlyIncome(incomeProfile.getDeclaredMonthlyIncome());
+                    existing.setUpdatedDate(LocalDate.now());
+                    return incomeProfileRepo.save(existing);
+                })
+                .orElseGet(() -> addIncome(incomeProfile, userId)); // fallback: create if none exists
     }
 
     public Optional<IncomeProfile> getIncomeProfile(Long userId) {
-
-        return incomeProfileRepo.findByUserId(userId);
+        return incomeProfileRepo.findFirstByUserIdOrderByIncomeProfileIdDesc(userId);
     }
 }

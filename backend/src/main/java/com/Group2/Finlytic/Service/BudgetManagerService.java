@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,9 @@ public class BudgetManagerService {
 
     @Autowired
     private Transactionsrepo transactionsrepo;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public BudgetManager saveBudget(BudgetManager budget, Long userId) {
         budget.setUserId(userId);
@@ -73,14 +77,25 @@ public class BudgetManagerService {
         });
     }
 
+
     public void updateBudgetFromTransaction(Transactions transaction) {
         if (transaction.getType() == Transactions.TransactionType.EXPENSE) {
             budgetManagerRepo
                     .findFirstByCategoryIgnoreCaseAndUserId(
-                            transaction.getCategory(), transaction.getUserId())  // ✅
+                            transaction.getCategory(), transaction.getUserId())
                     .ifPresent(budget -> {
-                        budget.setAmountSpent(budget.getAmountSpent().add(transaction.getAmount()));
+                        BigDecimal newAmount = budget.getAmountSpent().add(transaction.getAmount());
+                        budget.setAmountSpent(newAmount);
                         budgetManagerRepo.save(budget);
+
+                        // Fire exceeded notification if limit crossed
+                        if (newAmount.compareTo(budget.getBudgetLimit()) > 0) {
+                            notificationService.generateBudgetExceededNotification(
+                                    budget.getBudgetId(),
+                                    budget.getCategory(),
+                                    transaction.getUserId()
+                            );
+                        }
                     });
         }
     }

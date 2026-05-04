@@ -24,4 +24,6 @@ public interface NotificationRepo extends JpaRepository<Notification, Long> {
 
     // All unread for mark all as read
     List<Notification> findByUserIdAndReadFalse(Long userId);
+
+    void deleteByUserIdAndReferenceIdAndType(Long userId, Long referenceId, NotificationType type);
 }
