@@ -85,10 +85,10 @@ public class TransactionsService {
     return saved;
 }
 
-    // ── Analyze SMS + save + attempt goal match ───────────────────
+
     public Map<String, Object> analyzeAndSave(String rawMessage, Long userId) {
 
-        // 1. Duplicate check
+        //  Duplicate check
         String mpesaCode = extractMpesaCode(rawMessage);
         if (mpesaCode != null &&
                 transactionsRepo.existsByMpesaCodeAndUserId(mpesaCode, userId)) {
@@ -98,11 +98,11 @@ public class TransactionsService {
             );
         }
 
-        // 2. Run AI BEFORE encrypting — AI needs plain text
+        // Run AI BEFORE encrypting — AI needs plain text
         TransactionIntentResult result   = intentService.processTransaction(rawMessage, userId);
         TransactionAnalysis     analysis = result.analysis();
 
-        // 3. Encrypt raw message using user's unique key
+        // Encrypt raw message using user's unique key
         String encryptionKey    = getUserEncryptionKey(userId);
         String encryptedMessage = encryptionService.encryptMessage(rawMessage, encryptionKey);
 
@@ -123,6 +123,9 @@ public class TransactionsService {
         }
 
         Transactions saved = transactionsRepo.save(tx);
+        System.out.println("Saved tx - type: " + saved.getType()
+                + ", category: " + saved.getCategory()
+                + ", amount: " + saved.getAmount());
         budgetManagerService.updateBudgetFromTransaction(saved);
 
         // 5. Build response
@@ -192,7 +195,7 @@ public class TransactionsService {
         return response;
     }
 
-    // ── Fetch all — decrypt for this user ─────────────────────────
+    // ── Fetch all — decrypt for this user
     public List<Transactions> getTransactionsByUserId(Long userId) {
         String encryptionKey = getUserEncryptionKey(userId);
         return transactionsRepo.findByUserId(userId)
@@ -201,7 +204,7 @@ public class TransactionsService {
                 .toList();
     }
 
-    // ── Fetch single — decrypt for this user ──────────────────────
+    // ── Fetch single — decrypt for user
     public Optional<Transactions> getTransactionByIdAndUserId(Long id, Long userId) {
         String encryptionKey = getUserEncryptionKey(userId);
         return transactionsRepo.findByTransactionIdAndUserId(id, userId)

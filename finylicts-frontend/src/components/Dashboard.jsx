@@ -10,6 +10,7 @@ import NotificationBell from './NotificationBell';
 import Loader from './Loader';
 import DownloadAPKModal from './DownloadAPKModal';
 import SavingsPromptModal from './SavingsPromptModal';
+import IncomeSetupPopup from './IncomeSetupPopup';
 import { transactionService } from '../service/api';
 import './Dashboard.css';
 
@@ -86,6 +87,8 @@ const Dashboard = () => {
       }
     };
 
+    
+
     // Delay 5s so login token is fully settled before firing
     const initialDelay = setTimeout(findUnassignedSaving, 5000);
 
@@ -158,6 +161,7 @@ const Dashboard = () => {
           onSave={handleSaveSavingsGoal}
         />
       )}
+      <IncomeSetupPopup onComplete={fetchSummary} />
 
       {/* ── Header ── */}
       <div className="dashboard-header">

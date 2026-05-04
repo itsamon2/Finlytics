@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface IncomeProfileRepo extends JpaRepository<IncomeProfile, Long> {
 
     Optional<IncomeProfile> findByUserId(Long userId);
+
+    Optional<IncomeProfile> findFirstByUserIdOrderByIncomeProfileIdDesc(Long userId);
 }
